@@ -22,6 +22,10 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  leads         Lead[]
+  tags          Tag[]
+  exports       Export[]
+  imports       Import[]
 
   @@unique([email])
   @@map("user")
@@ -73,4 +77,74 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model Lead {
+  id             String    @id @default(cuid())
+  name           String
+  mobile         String
+  location       String?
+  notes          String?
+  email          String?
+  source         String
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags           Tag[]
+  importId       String?
+  import         Import?   @relation(fields: [importId], references: [id], onDelete: SetNull)
+  lastExportedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([userId, mobile])
+  @@index([userId])
+  @@index([importId])
+  @@index([userId, name])
+  @@index([userId, source])
+  @@index([userId, location])
+  @@index([userId, lastExportedAt])
+  @@map("lead")
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  title     String
+  color     String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leads     Lead[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, title])
+  @@index([userId])
+  @@map("tag")
+}
+
+model Export {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadCount  Int
+  fileName   String?
+  filters    Json?    // snapshot of name/mobile/location/source/export-age used
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("export")
+}
+
+model Import {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName     String
+  source       String   // usually same as fileName
+  successCount Int
+  errorCount   Int
+  createdAt    DateTime @default(now())
+  leads        Lead[]
+
+  @@index([userId, createdAt])
+  @@map("import")
 }
