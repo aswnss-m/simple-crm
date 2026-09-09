@@ -20,16 +20,13 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { User } from "@/lib/auth-client"
 import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
 
 export function NavUser({
   user,
 }: {
-  user: {
-    name: string
-    email: string
-    avatar: string
-  }
+  user: User
 }) {
   const { isMobile } = useSidebar()
   return (
@@ -42,8 +39,11 @@ export function NavUser({
             }
           >
             <Avatar>
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>CN</AvatarFallback>
+              {/*User image might me not there*/}
+              <AvatarImage src={user.image ?? ""} alt={user.name} />
+              <AvatarFallback>
+                {user.name.slice(0,2).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{user.name}</span>

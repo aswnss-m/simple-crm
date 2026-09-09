@@ -51,7 +51,7 @@ export default function LoginPage() {
     },
     onSubmit: async () => {
       //invoked after the onSubmitAsync sucess
-      redirect('/dashboard')
+      redirect('/overview')
     },
   });
 

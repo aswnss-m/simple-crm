@@ -38,7 +38,7 @@ export function NavProjects({
               {item.icon}
               <span>{item.name}</span>
             </SidebarMenuButton>
-            <DropdownMenu>
+            {/*<DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <SidebarMenuAction
@@ -73,7 +73,7 @@ export function NavProjects({
                   <span>Delete Project</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu>*/}
           </SidebarMenuItem>
         ))}
         <SidebarMenuItem>

@@ -11,7 +11,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
   //user is already signedin
   if (session) {
-    return redirect('/dashboard')
+    return redirect('/overview')
   }
     return (
         <main className="flex items-center justify-center h-screen w-full">

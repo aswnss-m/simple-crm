@@ -47,7 +47,7 @@ export default function RegisterPage() {
         },
         onSubmit: async () => {
           // Invoked after the onSubmitAsync validation
-          redirect('/dashboard')
+          redirect('/overview')
         },
     })
 
