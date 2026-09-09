@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { signUp } from "@/lib/auth-client";
 import { registerSchema } from "@/schema/register";
 import { useForm } from "@tanstack/react-form-nextjs";
 import Link from "next/link";
@@ -21,7 +22,20 @@ export default function RegisterPage() {
             onSubmit: registerSchema,
         },
         onSubmit: async ({ value }) => {
-            console.debug("Form submitted with values:", value);
+            const {data,error} = await signUp.email({
+                name: value.name,
+                email: value.email,
+                password: value.password,
+                // callbackURL:'/'
+            })
+            if(error) {
+                console.debug('Error registering user', JSON.stringify(error, null, 2))
+                return
+            }
+            if(data) {
+                console.debug('User registered successfully', JSON.stringify(data, null, 2))
+                return
+            }
         }
     })
 

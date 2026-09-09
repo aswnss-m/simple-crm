@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
 import { Login, loginSchema } from "@/schema/login";
 import { useForm } from "@tanstack/react-form-nextjs";
 import Link from "next/link";
@@ -20,7 +21,19 @@ export default function LoginPage() {
             onSubmit: loginSchema,
         },
         onSubmit: async ({ value }) => {
-            console.debug("Form submitted with values:", value);
+            const {data,error} = await authClient.signIn.email({
+                email: value.email,
+                password: value.password,
+                // callbackURL:'/'
+            })
+            if(error) {
+                console.debug('Error logging in', JSON.stringify(error, null, 2))
+                return
+            }
+            if(data) {
+                console.debug('User logged in successfully', JSON.stringify(data, null, 2))
+                return
+            }
         }
     })
 
