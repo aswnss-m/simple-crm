@@ -64,6 +64,7 @@ export async function createTag(input: unknown): Promise<TagActionResult> {
 
   revalidatePath("/tags")
   revalidatePath("/import")
+  revalidatePath("/leads")
   return { ok: true }
 }
 
@@ -111,6 +112,7 @@ export async function updateTag(input: unknown): Promise<TagActionResult> {
 
   revalidatePath("/tags")
   revalidatePath("/import")
+  revalidatePath("/leads")
   return { ok: true }
 }
 
@@ -146,5 +148,6 @@ export async function deleteTag(input: unknown): Promise<TagActionResult> {
 
   revalidatePath("/tags")
   revalidatePath("/import")
+  revalidatePath("/leads")
   return { ok: true }
 }

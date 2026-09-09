@@ -13,6 +13,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import {
+  ContactRoundIcon,
   FrameIcon,
   GalleryVerticalEndIcon,
   ImportIcon,
@@ -33,6 +34,11 @@ const data = {
       name: "Overview",
       url: "/overview",
       icon: <FrameIcon />,
+    },
+    {
+      name: "Contacts",
+      url: "/leads",
+      icon: <ContactRoundIcon />,
     },
     {
       name: "Import",

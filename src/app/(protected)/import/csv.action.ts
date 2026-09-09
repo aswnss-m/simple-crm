@@ -140,6 +140,7 @@ export async function importCsv(input: unknown): Promise<ImportCsvResult> {
 
   revalidatePath("/import")
   revalidatePath("/tags")
+  revalidatePath("/leads")
 
   return {
     ok: true,

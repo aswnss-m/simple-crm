@@ -1,11 +1,22 @@
 "use client"
 
-import { useMemo, useRef, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import CSVReader, { type IFileInfo } from "@uiw/react-csv-reader"
-import { Download, FileSpreadsheet, Loader2, Plus, Search, UploadCloud, X } from "lucide-react"
+import {
+  CheckCircle2,
+  CircleAlert,
+  Download,
+  FileSpreadsheet,
+  Plus,
+  Search,
+  UploadCloud,
+  X,
+} from "lucide-react"
 import { toast } from "sonner"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -40,6 +51,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Progress,
+  ProgressLabel,
+  ProgressValue,
+} from "@/components/ui/progress"
+import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 
 import {
@@ -52,6 +69,7 @@ import {
   TAG_COLORS,
   TEMPLATE_COLUMNS,
   type CsvRow,
+  type ImportCsvResult,
   type ImportTag,
   type MappedLead,
 } from "@/types/csv"
@@ -65,6 +83,9 @@ import {
 } from "./csv-map"
 
 const COLLAPSED_TAG_COUNT = 3
+
+type ImportPhase = "form" | "importing" | "success" | "error"
+type ImportSuccess = Extract<ImportCsvResult, { ok: true }>
 
 function downloadTemplate() {
   const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8;" })
@@ -88,7 +109,12 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
   const [tagDraft, setTagDraft] = useState("")
   const [selectedTagsOpen, setSelectedTagsOpen] = useState(false)
   const [availableTagsOpen, setAvailableTagsOpen] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [phase, setPhase] = useState<ImportPhase>("form")
+  const [progress, setProgress] = useState(0)
+  const [importResult, setImportResult] = useState<ImportSuccess | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const completeTimer = useRef<number>(0)
+  const busy = phase === "importing"
 
   const mapped = useMemo(() => mapRows(rows), [rows])
   const preview = useMemo(
@@ -144,6 +170,31 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
     draftTitle.length > 0 &&
     !selectedTags.some((tag) => tag.toLowerCase() === draftTitle.toLowerCase())
 
+  useEffect(() => {
+    if (phase !== "importing") return
+
+    const timer = window.setInterval(() => {
+      setProgress((current) => {
+        if (current >= 90) return current
+        return current + Math.max(0.6, (90 - current) * 0.08)
+      })
+    }, 180)
+
+    return () => window.clearInterval(timer)
+  }, [phase])
+
+  useEffect(() => {
+    return () => window.clearTimeout(completeTimer.current)
+  }, [])
+
+  function resetImportState() {
+    window.clearTimeout(completeTimer.current)
+    setPhase("form")
+    setProgress(0)
+    setImportResult(null)
+    setImportError(null)
+  }
+
   function resetFile() {
     setRows([])
     setFileInfo(null)
@@ -154,6 +205,7 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
     setTagDraft("")
     setSelectedTagsOpen(false)
     setAvailableTagsOpen(false)
+    resetImportState()
     if (inputRef.current) inputRef.current.value = ""
   }
 
@@ -223,53 +275,54 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
     setTagDraft("")
     setSelectedTagsOpen(false)
     setAvailableTagsOpen(false)
+    resetImportState()
   }
 
   function handleImport() {
     if (!fileInfo || !canImport) return
+    resetImportState()
     setDialogOpen(true)
   }
 
-  function confirmImport() {
-    if (!fileInfo || !canImport) return
+  async function confirmImport() {
+    if (!fileInfo || !canImport || busy) return
     const nextSource = source.trim()
     if (!nextSource) {
       toast.error("Add a source for these contacts.")
       return
     }
 
-    startTransition(async () => {
-      const tagsToImport = [...selectedTags]
-      if (
-        draftTitle &&
-        !tagsToImport.some((tag) => tag.toLowerCase() === draftTitle.toLowerCase())
-      ) {
-        tagsToImport.push(draftTitle)
-      }
+    const tagsToImport = [...selectedTags]
+    if (
+      draftTitle &&
+      !tagsToImport.some((tag) => tag.toLowerCase() === draftTitle.toLowerCase())
+    ) {
+      tagsToImport.push(draftTitle)
+    }
 
-      const result = await importCsv({
-        fileName: fileInfo.name,
-        source: nextSource,
-        tags: tagsToImport,
-        rows: mapped.valid,
-      })
+    setImportError(null)
+    setImportResult(null)
+    setProgress(12)
+    setPhase("importing")
 
-      if (!result.ok) {
-        toast.error(result.error)
-        return
-      }
-
-      if (result.duplicateCount > 0) {
-        toast.warning(
-          `Imported ${result.successCount} contacts. ${result.duplicateCount} skipped as duplicates.`,
-        )
-      } else {
-        toast.success(`Imported ${result.successCount} contacts.`)
-      }
-
-      resetFile()
-      router.refresh()
+    const result = await importCsv({
+      fileName: fileInfo.name,
+      source: nextSource,
+      tags: tagsToImport,
+      rows: mapped.valid,
     })
+
+    if (!result.ok) {
+      setImportError(result.error)
+      setPhase("error")
+      return
+    }
+
+    setImportResult(result)
+    setProgress(100)
+    window.clearTimeout(completeTimer.current)
+    completeTimer.current = window.setTimeout(() => setPhase("success"), 400)
+    router.refresh()
   }
 
   return (
@@ -304,7 +357,7 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
                 variant="ghost"
                 size="icon-sm"
                 onClick={resetFile}
-                disabled={isPending}
+                disabled={busy}
                 aria-label="Remove file"
               >
                 <X />
@@ -323,14 +376,14 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
                 type="button"
                 variant="outline"
                 onClick={resetFile}
-                disabled={isPending}
+                disabled={busy}
               >
                 Cancel
               </Button>
               <Button
                 type="button"
                 onClick={handleImport}
-                disabled={!canImport || isPending}
+                disabled={!canImport || busy}
               >
                 Import {mapped.valid.length} contacts
               </Button>
@@ -406,219 +459,351 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
       <Dialog
         open={dialogOpen}
         onOpenChange={(open) => {
-          if (isPending) return
-          setDialogOpen(open)
+          if (busy) return
           if (!open) {
+            if (phase === "success") {
+              resetFile()
+              return
+            }
+            setDialogOpen(false)
             setTagDraft("")
             setSelectedTagsOpen(false)
             setAvailableTagsOpen(false)
+            if (phase === "error") resetImportState()
+            return
           }
+          setDialogOpen(true)
         }}
       >
-        <DialogContent className="sm:max-w-md" showCloseButton={!isPending}>
+        <DialogContent className="sm:max-w-md" showCloseButton={!busy}>
           <DialogHeader>
-            <DialogTitle>Import details</DialogTitle>
+            <DialogTitle>
+              {phase === "importing"
+                ? "Importing contacts"
+                : phase === "success"
+                  ? "Import complete"
+                  : phase === "error"
+                    ? "Import failed"
+                    : "Import details"}
+            </DialogTitle>
             <DialogDescription>
-              Apply a source and tags to all {mapped.valid.length} contacts in
-              this file.
+              {phase === "importing"
+                ? `Saving ${mapped.valid.length.toLocaleString()} contacts. Keep this window open.`
+                : phase === "success"
+                  ? "Your file has been processed."
+                  : phase === "error"
+                    ? "Nothing was imported. You can try again."
+                    : `Apply a source and tags to all ${mapped.valid.length} contacts in this file.`}
             </DialogDescription>
           </DialogHeader>
 
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="import-source">Source</FieldLabel>
-              <Input
-                id="import-source"
-                value={source}
-                onChange={(event) => setSource(event.target.value)}
-                placeholder="Website, referral, campaign…"
-                disabled={isPending}
-                autoComplete="off"
-                required
-              />
-              <FieldDescription>
-                Where did you get this data from
-              </FieldDescription>
-            </Field>
+          {phase === "importing" ? (
+            <ImportProgressPanel
+              progress={progress}
+              total={mapped.valid.length}
+            />
+          ) : null}
 
-            <Field>
-              <FieldLabel htmlFor="import-tags">Tags</FieldLabel>
-              {selectedTags.length > 0 ? (
-                <div className="flex max-h-24 flex-wrap items-center gap-1.5 overflow-y-auto">
-                  {visibleSelectedTags.map((tag) => (
-                    <Badge key={tag.title} variant="secondary" className="pr-0.5">
-                      <span
-                        className="size-2 rounded-full"
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      {tag.title}
-                      <button
-                        type="button"
-                        className="rounded-full p-0.5 hover:bg-muted"
-                        onClick={() => removeTag(tag.title)}
-                        disabled={isPending}
-                        aria-label={`Remove ${tag.title}`}
-                      >
-                        <X className="size-2.5" />
-                      </button>
-                    </Badge>
-                  ))}
-                  {hiddenSelectedCount > 0 ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      disabled={isPending}
-                      onClick={() => setSelectedTagsOpen(true)}
-                    >
-                      +{hiddenSelectedCount} more
-                    </Button>
-                  ) : selectedTagsOpen &&
-                    selectedTags.length > COLLAPSED_TAG_COUNT ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      disabled={isPending}
-                      onClick={() => setSelectedTagsOpen(false)}
-                    >
-                      Show less
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
-              <InputGroup
-                onKeyDown={(event) => {
-                  if (event.nativeEvent.isComposing) return
-                  if (event.key === "Enter" || event.key === ",") {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    commitDraftTag()
-                  }
-                }}
-              >
-                <InputGroupAddon>
-                  <Search />
-                </InputGroupAddon>
-                <InputGroupInput
-                  id="import-tags"
-                  value={tagDraft}
-                  onChange={(event) => setTagDraft(event.target.value)}
-                  placeholder="Search or add a tag"
-                  disabled={isPending}
+          {phase === "success" && importResult ? (
+            <ImportSuccessPanel result={importResult} />
+          ) : null}
+
+          {phase === "error" ? (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>Could not import contacts</AlertTitle>
+              <AlertDescription>
+                {importError ?? "Please try again."}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {phase === "form" ? (
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="import-source">Source</FieldLabel>
+                <Input
+                  id="import-source"
+                  value={source}
+                  onChange={(event) => setSource(event.target.value)}
+                  placeholder="Website, referral, campaign…"
+                  disabled={busy}
                   autoComplete="off"
+                  required
                 />
-                {canAddDraft ? (
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      size="xs"
-                      aria-label={`Add tag ${draftTitle}`}
-                      disabled={isPending}
-                      onClick={commitDraftTag}
-                    >
-                      <Plus />
-                      Add
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                ) : tagDraft.length > 0 ? (
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      size="icon-xs"
-                      aria-label="Clear tag search"
-                      disabled={isPending}
-                      onClick={() => setTagDraft("")}
-                    >
-                      <X />
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                ) : null}
-              </InputGroup>
-              <FieldDescription>
-                Search existing tags, or type a new one and press Enter or Add.
-              </FieldDescription>
-              {canAddDraft &&
-              !unusedTags.some(
-                (tag) => tag.title.toLowerCase() === draftTitle.toLowerCase(),
-              ) ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  disabled={isPending}
-                  onClick={commitDraftTag}
-                >
-                  <Plus />
-                  Create “{draftTitle}”
-                </Button>
-              ) : null}
-              {unusedTags.length > 0 ? (
-                <div className="flex max-h-32 flex-wrap items-center gap-1.5 overflow-y-auto">
-                  {visibleAvailableTags.map((tag) => (
-                    <Button
-                      key={tag.id}
-                      type="button"
-                      variant="outline"
-                      size="xs"
-                      disabled={isPending}
-                      onClick={() => addTag(tag.title, { keepDraft: true })}
-                    >
-                      <span
-                        className="size-2 rounded-full"
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      {tag.title}
-                    </Button>
-                  ))}
-                  {hiddenAvailableCount > 0 ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      disabled={isPending}
-                      onClick={() => setAvailableTagsOpen(true)}
-                    >
-                      +{hiddenAvailableCount} more
-                    </Button>
-                  ) : null}
-                  {availableTagsOpen &&
-                  !tagQuery &&
-                  matchingUnusedTags.length > COLLAPSED_TAG_COUNT ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      disabled={isPending}
-                      onClick={() => setAvailableTagsOpen(false)}
-                    >
-                      Show less
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
-            </Field>
-          </FieldGroup>
+                <FieldDescription>
+                  Where did you get this data from
+                </FieldDescription>
+              </Field>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              disabled={isPending}
-            >
-              Back
-            </Button>
-            <Button
-              type="button"
-              onClick={confirmImport}
-              disabled={isPending || source.trim().length === 0}
-            >
-              {isPending ? <Loader2 className="animate-spin" /> : null}
-              Import {mapped.valid.length} contacts
-            </Button>
-          </DialogFooter>
+              <Field>
+                <FieldLabel htmlFor="import-tags">Tags</FieldLabel>
+                {selectedTags.length > 0 ? (
+                  <div className="flex max-h-24 flex-wrap items-center gap-1.5 overflow-y-auto">
+                    {visibleSelectedTags.map((tag) => (
+                      <Badge key={tag.title} variant="secondary" className="pr-0.5">
+                        <span
+                          className="size-2 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        {tag.title}
+                        <button
+                          type="button"
+                          className="rounded-full p-0.5 hover:bg-muted"
+                          onClick={() => removeTag(tag.title)}
+                          disabled={busy}
+                          aria-label={`Remove ${tag.title}`}
+                        >
+                          <X className="size-2.5" />
+                        </button>
+                      </Badge>
+                    ))}
+                    {hiddenSelectedCount > 0 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        disabled={busy}
+                        onClick={() => setSelectedTagsOpen(true)}
+                      >
+                        +{hiddenSelectedCount} more
+                      </Button>
+                    ) : selectedTagsOpen &&
+                      selectedTags.length > COLLAPSED_TAG_COUNT ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        disabled={busy}
+                        onClick={() => setSelectedTagsOpen(false)}
+                      >
+                        Show less
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+                <InputGroup
+                  onKeyDown={(event) => {
+                    if (event.nativeEvent.isComposing) return
+                    if (event.key === "Enter" || event.key === ",") {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      commitDraftTag()
+                    }
+                  }}
+                >
+                  <InputGroupAddon>
+                    <Search />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="import-tags"
+                    value={tagDraft}
+                    onChange={(event) => setTagDraft(event.target.value)}
+                    placeholder="Search or add a tag"
+                    disabled={busy}
+                    autoComplete="off"
+                  />
+                  {canAddDraft ? (
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        size="xs"
+                        aria-label={`Add tag ${draftTitle}`}
+                        disabled={busy}
+                        onClick={commitDraftTag}
+                      >
+                        <Plus />
+                        Add
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  ) : tagDraft.length > 0 ? (
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        size="icon-xs"
+                        aria-label="Clear tag search"
+                        disabled={busy}
+                        onClick={() => setTagDraft("")}
+                      >
+                        <X />
+                      </InputGroupButton>
+                    </InputGroupAddon>
+                  ) : null}
+                </InputGroup>
+                <FieldDescription>
+                  Search existing tags, or type a new one and press Enter or Add.
+                </FieldDescription>
+                {canAddDraft &&
+                !unusedTags.some(
+                  (tag) => tag.title.toLowerCase() === draftTitle.toLowerCase(),
+                ) ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={busy}
+                    onClick={commitDraftTag}
+                  >
+                    <Plus />
+                    Create “{draftTitle}”
+                  </Button>
+                ) : null}
+                {unusedTags.length > 0 ? (
+                  <div className="flex max-h-32 flex-wrap items-center gap-1.5 overflow-y-auto">
+                    {visibleAvailableTags.map((tag) => (
+                      <Button
+                        key={tag.id}
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        disabled={busy}
+                        onClick={() => addTag(tag.title, { keepDraft: true })}
+                      >
+                        <span
+                          className="size-2 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        {tag.title}
+                      </Button>
+                    ))}
+                    {hiddenAvailableCount > 0 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        disabled={busy}
+                        onClick={() => setAvailableTagsOpen(true)}
+                      >
+                        +{hiddenAvailableCount} more
+                      </Button>
+                    ) : null}
+                    {availableTagsOpen &&
+                    !tagQuery &&
+                    matchingUnusedTags.length > COLLAPSED_TAG_COUNT ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        disabled={busy}
+                        onClick={() => setAvailableTagsOpen(false)}
+                      >
+                        Show less
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </Field>
+            </FieldGroup>
+          ) : null}
+
+          {phase === "form" ? (
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                disabled={busy}
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void confirmImport()}
+                disabled={busy || source.trim().length === 0}
+              >
+                Import {mapped.valid.length} contacts
+              </Button>
+            </DialogFooter>
+          ) : null}
+
+          {phase === "error" ? (
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => resetImportState()}
+              >
+                Back
+              </Button>
+              <Button type="button" onClick={() => void confirmImport()}>
+                Try again
+              </Button>
+            </DialogFooter>
+          ) : null}
+
+          {phase === "success" ? (
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                render={<Link href="/leads" />}
+              >
+                View contacts
+              </Button>
+              <Button type="button" onClick={resetFile}>
+                Done
+              </Button>
+            </DialogFooter>
+          ) : null}
         </DialogContent>
       </Dialog>
     </Card>
+  )
+}
+
+function importProgressLabel(progress: number) {
+  if (progress < 25) return "Preparing import"
+  if (progress < 55) return "Saving contacts"
+  if (progress < 90) return "Applying tags"
+  if (progress < 100) return "Finishing up"
+  return "Import complete"
+}
+
+function ImportProgressPanel({
+  progress,
+  total,
+}: {
+  progress: number
+  total: number
+}) {
+  const value = Math.min(100, Math.round(progress))
+
+  return (
+    <div className="space-y-4 py-1">
+      <div className="flex items-center gap-2">
+        <Spinner />
+        <p className="text-sm font-medium" aria-live="polite">
+          Importing {total.toLocaleString()} contacts
+        </p>
+      </div>
+      <Progress
+        value={value}
+        className="w-full **:data-[slot=progress-track]:h-2"
+      >
+        <ProgressLabel>{importProgressLabel(value)}</ProgressLabel>
+        <ProgressValue />
+      </Progress>
+      <p className="text-xs text-muted-foreground">
+        This can take a few seconds for larger files.
+      </p>
+    </div>
+  )
+}
+
+function ImportSuccessPanel({ result }: { result: ImportSuccess }) {
+  const skipped = result.duplicateCount > 0
+
+  return (
+    <Alert>
+      <CheckCircle2 />
+      <AlertTitle>
+        {result.successCount.toLocaleString()}{" "}
+        {result.successCount === 1 ? "contact" : "contacts"} imported
+      </AlertTitle>
+      <AlertDescription>
+        {skipped
+          ? `${result.duplicateCount.toLocaleString()} skipped as duplicates.`
+          : "All rows in this file were added to your CRM."}
+      </AlertDescription>
+    </Alert>
   )
 }
 

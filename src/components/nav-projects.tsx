@@ -30,7 +30,9 @@ export function NavProjects({
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton
-              isActive={pathname === item.url}
+              isActive={
+                pathname === item.url || pathname.startsWith(`${item.url}/`)
+              }
               tooltip={item.name}
               render={<Link href={item.url} />}
             >
