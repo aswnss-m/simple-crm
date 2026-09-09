@@ -24,6 +24,7 @@ import {
   FrameIcon,
   PieChartIcon,
   MapIcon,
+  ImportIcon,
 } from "lucide-react";
 import type { Session } from "@/lib/auth-client";
 
@@ -145,9 +146,9 @@ const data = {
       icon: <FrameIcon />,
     },
     {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: <PieChartIcon />,
+      name: "Import",
+      url: "/import",
+      icon: <ImportIcon />,
     },
     {
       name: "Travel",
