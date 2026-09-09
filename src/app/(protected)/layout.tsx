@@ -1,8 +1,14 @@
-"use client"
-import { authClient } from "@/lib/auth-client";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-    const {data:session} = authClient.useSession()
+export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
+
+  const session = await auth.api.getSession({
+    headers: await headers()
+  })
+
+  if (!session) return redirect('/login')
     return (
         <div>
             {children}

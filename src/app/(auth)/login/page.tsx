@@ -22,6 +22,7 @@ import Link from "next/link";
 import { Activity } from "react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
+import { redirect } from "next/navigation";
 
 export default function LoginPage() {
   const form = useForm({
@@ -49,7 +50,8 @@ export default function LoginPage() {
       },
     },
     onSubmit: async () => {
-      console.log("Loged in");
+      //invoked after the onSubmitAsync sucess
+      redirect('/dashboard')
     },
   });
 

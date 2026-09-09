@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Activity } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { redirect } from "next/navigation";
 
 
 export default function RegisterPage() {
@@ -45,7 +46,8 @@ export default function RegisterPage() {
           },
         },
         onSubmit: async () => {
-          console.log("Called after validation")
+          // Invoked after the onSubmitAsync validation
+          redirect('/dashboard')
         },
     })
 

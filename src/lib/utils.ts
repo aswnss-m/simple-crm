@@ -13,7 +13,7 @@ export type OperationResult<T, E> = OperationSuccess<T> | OperationFailure<E>;
 export function isPromise<T = any>(value: unknown): value is Promise<T> {
     return (
         !!value &&
-    (typeof value === 'object' || typeof value === 'function') &&
+      (typeof value === 'object' || typeof value === 'function') &&
     typeof (value as any).then === 'function'
 );
 }
@@ -44,7 +44,7 @@ export function trycatch<T, E = Error>(
 export function trycatch<T, E = Error>(
   operation: Operation<T>,
 ): OperationResult<T, E> | Promise<OperationResult<T, E>> {
-  
+
   // Helper functions for consistent returns
   const onSuccess = <T>(value: T): OperationSuccess<T> => {
     return [value, null];

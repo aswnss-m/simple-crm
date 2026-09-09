@@ -1,7 +1,11 @@
+"use client"
+
+import SignOut from "@/components/sign-out";
+
 export default function HomePage() {
     return (
         <div>
-            HomePage
+          <SignOut />
         </div>
     );
 }
