@@ -25,6 +25,7 @@ export type ExportFormat = z.infer<typeof exportFormatSchema>
 export const exportFiltersSchema = z.object({
   source: emptyString,
   location: emptyString,
+  tags: z.array(z.coerce.number().int().positive()).max(50).default([]),
   includePreviouslyExported: z.boolean(),
   limit: z.number().int().min(1).max(MAX_EXPORT_LIMIT).transform(clampExportLimit),
   format: exportFormatSchema,
@@ -78,6 +79,7 @@ export type ExportPreviewResult =
 export const DEFAULT_EXPORT_FILTERS: ExportFilters = {
   source: undefined,
   location: undefined,
+  tags: [],
   includePreviouslyExported: false,
   limit: DEFAULT_EXPORT_LIMIT,
   format: "csv",

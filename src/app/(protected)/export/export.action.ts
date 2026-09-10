@@ -1,11 +1,9 @@
 "use server"
 
-import { headers } from "next/headers"
-import { revalidatePath } from "next/cache"
-
-import { auth } from "@/lib/auth"
 import { buildExportFileName } from "@/lib/export-csv"
 import { prisma } from "@/lib/prisma"
+import { revalidateLeadData } from "@/lib/lead-cache"
+import { getSession } from "@/lib/session"
 import { trycatch } from "@/lib/utils"
 import {
   exportInputSchema,
@@ -23,16 +21,8 @@ import {
 } from "./export-query"
 
 async function getUserId() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
   return session?.user.id ?? null
-}
-
-function revalidateExportPaths() {
-  revalidatePath("/export")
-  revalidatePath("/leads")
-  revalidatePath("/overview")
 }
 
 export async function previewExport(input: unknown): Promise<ExportPreviewResult> {
@@ -98,7 +88,17 @@ export async function createExport(input: unknown): Promise<ExportActionResult> 
         }
 
         const now = new Date()
-        const fileName = buildExportFileName(filters, leads.length, now)
+        const tagTitles =
+          filters.tags.length === 0
+            ? []
+            : (
+                await tx.tag.findMany({
+                  where: { userId, id: { in: filters.tags } },
+                  select: { title: true },
+                  orderBy: { title: "asc" },
+                })
+              ).map((tag) => tag.title)
+        const fileName = buildExportFileName(filters, leads.length, now, tagTitles)
         const previouslyExportedCount = leads.filter((lead) => lead.lastExportedAt).length
 
         const record = await tx.export.create({
@@ -150,7 +150,7 @@ export async function createExport(input: unknown): Promise<ExportActionResult> 
     }
   }
 
-  revalidateExportPaths()
+  revalidateLeadData(userId)
 
   return {
     ok: true,

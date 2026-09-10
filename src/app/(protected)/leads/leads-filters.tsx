@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type TransitionStartFunction } from "react"
 import { useRouter } from "next/navigation"
 import { ListFilter, Search, X } from "lucide-react"
 
@@ -28,7 +28,9 @@ import {
 } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { TagFilterSearch } from "@/components/tag-filter-search"
 import type { LeadListQuery } from "@/types/lead"
+import type { Tag } from "@/types/tag"
 
 import { leadListHref } from "./leads-query"
 
@@ -38,10 +40,14 @@ export function LeadsFilters({
   query,
   sources,
   locations,
+  tags,
+  startTransition,
 }: {
   query: LeadListQuery
   sources: string[]
   locations: string[]
+  tags: Tag[]
+  startTransition: TransitionStartFunction
 }) {
   const router = useRouter()
   const [search, setSearch] = useState(query.q ?? "")
@@ -51,17 +57,20 @@ export function LeadsFilters({
     query.location,
     query.exported,
     query.origin,
+    query.tags.length > 0 ? "tags" : undefined,
   ].filter(Boolean).length
 
   function go(next: Partial<LeadListQuery>) {
-    router.replace(
-      leadListHref({
-        ...query,
-        q: search.trim() || undefined,
-        ...next,
-        page: 1,
-      }),
-    )
+    startTransition(() => {
+      router.replace(
+        leadListHref({
+          ...query,
+          q: search.trim() || undefined,
+          ...next,
+          page: 1,
+        }),
+      )
+    })
   }
 
   useEffect(() => {
@@ -73,17 +82,19 @@ export function LeadsFilters({
     if (nextQuery === (query.q || undefined)) return
 
     const timer = window.setTimeout(() => {
-      router.replace(
-        leadListHref({
-          ...query,
-          q: nextQuery,
-          page: 1,
-        }),
-      )
+      startTransition(() => {
+        router.replace(
+          leadListHref({
+            ...query,
+            q: nextQuery,
+            page: 1,
+          }),
+        )
+      })
     }, SEARCH_DELAY_MS)
 
     return () => window.clearTimeout(timer)
-  }, [query, router, search])
+  }, [query, router, search, startTransition])
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -125,7 +136,7 @@ export function LeadsFilters({
             <Badge variant="secondary">{filterCount}</Badge>
           ) : null}
         </PopoverTrigger>
-        <PopoverContent align="end" className="w-72 gap-3">
+        <PopoverContent align="end" className="w-80 gap-3 sm:w-96">
           <PopoverHeader>
             <PopoverTitle>Filters</PopoverTitle>
           </PopoverHeader>
@@ -176,6 +187,16 @@ export function LeadsFilters({
                 ))}
               </SelectContent>
             </Select>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="leads-filter-tags">Tags</FieldLabel>
+            <TagFilterSearch
+              id="leads-filter-tags"
+              tags={tags}
+              selected={query.tags}
+              onChange={(next) => go({ tags: next })}
+            />
           </Field>
 
           <Field>
@@ -236,6 +257,7 @@ export function LeadsFilters({
                   location: undefined,
                   exported: undefined,
                   origin: undefined,
+                  tags: [],
                 })
               }
             >

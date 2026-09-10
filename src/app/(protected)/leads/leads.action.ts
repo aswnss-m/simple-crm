@@ -1,10 +1,9 @@
 "use server"
 
-import { headers } from "next/headers"
-import { revalidatePath } from "next/cache"
-
-import { auth } from "@/lib/auth"
+import { guessFromMobile } from "@/lib/phone-location"
 import { prisma } from "@/lib/prisma"
+import { revalidateLeadData } from "@/lib/lead-cache"
+import { getSession } from "@/lib/session"
 import { trycatch } from "@/lib/utils"
 import { TAG_COLORS } from "@/types/tag"
 import {
@@ -15,9 +14,7 @@ import {
 } from "@/types/lead"
 
 async function getUserId() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
   return session?.user.id ?? null
 }
 
@@ -69,15 +66,6 @@ async function resolveTagIds(
   return tagIds
 }
 
-function revalidateLeadPaths(id?: string) {
-  revalidatePath("/leads")
-  revalidatePath("/tags")
-  revalidatePath("/import")
-  revalidatePath("/export")
-  revalidatePath("/overview")
-  if (id) revalidatePath(`/leads/${id}`)
-}
-
 export async function createLead(input: unknown): Promise<LeadActionResult> {
   const userId = await getUserId()
   if (!userId) {
@@ -97,6 +85,10 @@ export async function createLead(input: unknown): Promise<LeadActionResult> {
     prisma.lead.create({
       data: {
         ...data,
+        location:
+          data.location ??
+          guessFromMobile(data.mobile, { requireCountryPrefix: true })?.country ??
+          null,
         userId,
       },
       select: { id: true },
@@ -122,7 +114,7 @@ export async function createLead(input: unknown): Promise<LeadActionResult> {
     })
   }
 
-  revalidateLeadPaths(created.id)
+  revalidateLeadData(userId, created.id)
   return { ok: true, id: created.id }
 }
 
@@ -158,7 +150,10 @@ export async function updateLead(input: unknown): Promise<LeadActionResult> {
         mobile: data.mobile,
         source: data.source,
         email: data.email ?? null,
-        location: data.location ?? null,
+        location:
+          data.location ??
+          guessFromMobile(data.mobile, { requireCountryPrefix: true })?.country ??
+          null,
         notes: data.notes ?? null,
       },
       select: { id: true },
@@ -182,7 +177,7 @@ export async function updateLead(input: unknown): Promise<LeadActionResult> {
     },
   })
 
-  revalidateLeadPaths(id)
+  revalidateLeadData(userId, id)
   return { ok: true, id }
 }
 
@@ -216,6 +211,6 @@ export async function deleteLead(input: unknown): Promise<LeadActionResult> {
     return { ok: false, error: "Could not delete that contact." }
   }
 
-  revalidateLeadPaths(parsed.data.id)
+  revalidateLeadData(userId, parsed.data.id)
   return { ok: true, id: parsed.data.id }
 }

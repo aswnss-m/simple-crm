@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { TagFilterSearch } from "@/components/tag-filter-search"
 import {
   Select,
   SelectContent,
@@ -52,6 +53,8 @@ import {
   type ExportPreview,
   type ExportPreviewLead,
 } from "@/types/export"
+import type { Tag } from "@/types/tag"
+import { tagTitlesForIds } from "@/lib/export-csv"
 
 import { createExport, previewExport } from "./export.action"
 import { computeExportPreview } from "./export-query"
@@ -71,19 +74,21 @@ function downloadExport(id: string, fileName: string) {
   link.remove()
 }
 
-function selectionKey(filters: Pick<ExportFilters, "source" | "location" | "includePreviouslyExported">) {
-  return `${filters.source ?? ""}:${filters.location ?? ""}:${filters.includePreviouslyExported}`
+function selectionKey(filters: Pick<ExportFilters, "source" | "location" | "tags" | "includePreviouslyExported">) {
+  return `${filters.source ?? ""}:${filters.location ?? ""}:${filters.tags.slice().sort((a, b) => a - b).join(",")}:${filters.includePreviouslyExported}`
 }
 
 export function ExportForm({
   sources,
   locations,
+  tags,
   initialFilters,
   initialPreview,
   initialSamples,
 }: {
   sources: string[]
   locations: string[]
+  tags: Tag[]
   initialFilters: ExportFilters
   initialPreview: ExportPreview
   initialSamples: ExportPreviewLead[]
@@ -192,7 +197,13 @@ export function ExportForm({
   }
 
   const canExport = preview.batchSize > 0 && !isExporting
-  const filterHint = [filters.location, filters.source].filter(Boolean).join(" · ")
+  const filterHint = [
+    filters.location,
+    filters.source,
+    ...tagTitlesForIds(filters.tags, tags),
+  ]
+    .filter(Boolean)
+    .join(" · ")
 
   return (
     <Card>
@@ -254,6 +265,17 @@ export function ExportForm({
                 ))}
               </SelectContent>
             </Select>
+          </Field>
+
+          <Field className="sm:col-span-2">
+            <FieldLabel htmlFor="export-tags">Tags</FieldLabel>
+            <TagFilterSearch
+              id="export-tags"
+              tags={tags}
+              selected={filters.tags}
+              onChange={(next) => patch({ tags: next })}
+              disabled={isExporting}
+            />
           </Field>
 
           <Field className="sm:col-span-2">

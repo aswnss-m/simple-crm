@@ -48,23 +48,44 @@ function slugPart(value: string) {
     .slice(0, 32)
 }
 
+export function tagTitlesForIds(
+  tagIds: number[] | undefined,
+  tags: { id: number; title: string }[],
+) {
+  if (!tagIds || tagIds.length === 0) return []
+  const titles = new Map(tags.map((tag) => [tag.id, tag.title]))
+  return tagIds.flatMap((id) => {
+    const title = titles.get(id)
+    return title ? [title] : []
+  })
+}
+
 export function buildExportFileName(
   filters: ExportFilters,
   leadCount: number,
   createdAt = new Date(),
+  tagTitles: string[] = [],
 ) {
   const parts = ["contacts", format(createdAt, "yyyy-MM-dd-HHmm")]
   if (filters.location) parts.push(slugPart(filters.location))
   if (filters.source) parts.push(slugPart(filters.source))
+  if (tagTitles.length > 0) {
+    parts.push(slugPart(tagTitles.slice(0, 2).join("-")))
+  }
   parts.push(String(leadCount))
   return `${parts.filter(Boolean).join("-")}${filters.format === "numbers" ? ".txt" : ".csv"}`
 }
 
-export function exportFilterLabel(filters: ExportFilters | null) {
+export function exportFilterLabel(
+  filters: ExportFilters | null,
+  tags: { id: number; title: string }[] = [],
+) {
   if (!filters) return "All contacts"
   const parts: string[] = []
   if (filters.location) parts.push(filters.location)
   if (filters.source) parts.push(filters.source)
+  const tagTitles = tagTitlesForIds(filters.tags, tags)
+  if (tagTitles.length > 0) parts.push(tagTitles.join(", "))
   parts.push(
     filters.includePreviouslyExported
       ? "including previously exported"

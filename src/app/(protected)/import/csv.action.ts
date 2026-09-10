@@ -1,11 +1,9 @@
 "use server"
 
-import { headers } from "next/headers"
-import { revalidatePath } from "next/cache"
-
-import { auth } from "@/lib/auth"
 import { locationFromMobile } from "@/lib/phone-location"
 import { prisma } from "@/lib/prisma"
+import { revalidateLeadData } from "@/lib/lead-cache"
+import { getSession } from "@/lib/session"
 import { trycatch } from "@/lib/utils"
 import {
   importCsvSchema,
@@ -14,9 +12,7 @@ import {
 } from "@/types/csv"
 
 export async function importCsv(input: unknown): Promise<ImportCsvResult> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
 
   if (!session) {
     return { ok: false, error: "You need to be signed in to import contacts." }
@@ -139,11 +135,7 @@ export async function importCsv(input: unknown): Promise<ImportCsvResult> {
     return { ok: false, error: "Could not import contacts. Please try again." }
   }
 
-  revalidatePath("/import")
-  revalidatePath("/tags")
-  revalidatePath("/leads")
-  revalidatePath("/export")
-  revalidatePath("/overview")
+  revalidateLeadData(userId)
 
   return {
     ok: true,

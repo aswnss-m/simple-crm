@@ -1,8 +1,7 @@
-import { headers } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getSession } from "@/lib/session"
 
 import { LeadDetail } from "./lead-detail"
 
@@ -11,9 +10,7 @@ export default async function LeadPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
 
   if (!session) return redirect("/login")
 

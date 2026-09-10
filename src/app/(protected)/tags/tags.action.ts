@@ -1,10 +1,8 @@
 "use server"
 
-import { headers } from "next/headers"
-import { revalidatePath } from "next/cache"
-
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { revalidateLeadData } from "@/lib/lead-cache"
+import { getSession } from "@/lib/session"
 import { trycatch } from "@/lib/utils"
 import {
   createTagSchema,
@@ -14,9 +12,7 @@ import {
 } from "@/types/tag"
 
 async function getUserId() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
   return session?.user.id ?? null
 }
 
@@ -62,9 +58,7 @@ export async function createTag(input: unknown): Promise<TagActionResult> {
     }
   }
 
-  revalidatePath("/tags")
-  revalidatePath("/import")
-  revalidatePath("/leads")
+  revalidateLeadData(userId)
   return { ok: true }
 }
 
@@ -110,9 +104,7 @@ export async function updateTag(input: unknown): Promise<TagActionResult> {
     }
   }
 
-  revalidatePath("/tags")
-  revalidatePath("/import")
-  revalidatePath("/leads")
+  revalidateLeadData(userId)
   return { ok: true }
 }
 
@@ -146,8 +138,6 @@ export async function deleteTag(input: unknown): Promise<TagActionResult> {
     return { ok: false, error: "Could not delete that tag." }
   }
 
-  revalidatePath("/tags")
-  revalidatePath("/import")
-  revalidatePath("/leads")
+  revalidateLeadData(userId)
   return { ok: true }
 }

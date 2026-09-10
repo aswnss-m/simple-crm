@@ -1,5 +1,6 @@
 "use client"
 
+import { useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ContactRound, Plus, Search } from "lucide-react"
@@ -22,7 +23,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { PageHeader } from "@/components/page-header"
+import { cn } from "@/lib/utils"
 import { LEADS_PAGE_SIZE, type LeadListItem, type LeadListQuery } from "@/types/lead"
+import type { Tag } from "@/types/tag"
 
 import { LeadsFilters } from "./leads-filters"
 import { LeadsPagination } from "./leads-pagination"
@@ -35,6 +38,7 @@ export function LeadsList({
   filtered,
   sources,
   locations,
+  tags,
 }: {
   leads: LeadListItem[]
   query: LeadListQuery
@@ -43,8 +47,10 @@ export function LeadsList({
   filtered: boolean
   sources: string[]
   locations: string[]
+  tags: Tag[]
 }) {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const from = total === 0 ? 0 : (query.page - 1) * LEADS_PAGE_SIZE + 1
   const to = Math.min(query.page * LEADS_PAGE_SIZE, total)
 
@@ -77,6 +83,8 @@ export function LeadsList({
               query={query}
               sources={sources}
               locations={locations}
+              tags={tags}
+              startTransition={startTransition}
             />
           )}
 
@@ -114,7 +122,12 @@ export function LeadsList({
               </p>
             </div>
           ) : (
-            <div className="rounded-lg border">
+            <div
+              className={cn(
+                "rounded-lg border transition-opacity duration-200",
+                isPending && "pointer-events-none opacity-60",
+              )}
+            >
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -138,6 +151,7 @@ export function LeadsList({
                         <Link
                           href={`/leads/${lead.id}`}
                           className="font-medium hover:underline"
+                          onClick={(event) => event.stopPropagation()}
                         >
                           {lead.name}
                         </Link>

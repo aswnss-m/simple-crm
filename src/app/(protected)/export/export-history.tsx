@@ -15,10 +15,17 @@ import {
 import { exportFilterLabel } from "@/lib/export-csv"
 import { cn } from "@/lib/utils"
 import type { ExportListItem } from "@/types/export"
+import type { Tag } from "@/types/tag"
 
 const countFormat = new Intl.NumberFormat("en-IN")
 
-export function ExportHistory({ exports }: { exports: ExportListItem[] }) {
+export function ExportHistory({
+  exports,
+  tags,
+}: {
+  exports: ExportListItem[]
+  tags: Tag[]
+}) {
   return (
     <Card>
       <CardHeader>
@@ -50,7 +57,7 @@ export function ExportHistory({ exports }: { exports: ExportListItem[] }) {
                       addSuffix: true,
                     })}
                     {" · "}
-                    {exportFilterLabel(item.filters)}
+                    {exportFilterLabel(item.filters, tags)}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

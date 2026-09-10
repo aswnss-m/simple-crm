@@ -3,6 +3,7 @@ import {
   leadListQuerySchema,
   type LeadListQuery,
 } from "@/types/lead"
+import { parseTagIds } from "@/lib/tag-filter"
 
 function firstParam(
   params: Record<string, string | string[] | undefined>,
@@ -10,6 +11,16 @@ function firstParam(
 ) {
   const value = params[key]
   return Array.isArray(value) ? value[0] : value
+}
+
+const emptyQuery: LeadListQuery = {
+  q: undefined,
+  source: undefined,
+  location: undefined,
+  exported: undefined,
+  origin: undefined,
+  tags: [],
+  page: 1,
 }
 
 export function parseLeadListQuery(
@@ -21,24 +32,21 @@ export function parseLeadListQuery(
     location: firstParam(params, "location"),
     exported: firstParam(params, "exported") || undefined,
     origin: firstParam(params, "origin") || undefined,
+    tags: parseTagIds(params.tag),
     page: firstParam(params, "page") ?? 1,
   })
 
-  return parsed.success
-    ? parsed.data
-    : {
-        q: undefined,
-        source: undefined,
-        location: undefined,
-        exported: undefined,
-        origin: undefined,
-        page: 1,
-      }
+  return parsed.success ? parsed.data : emptyQuery
 }
 
 export function hasLeadFilters(query: LeadListQuery) {
   return Boolean(
-    query.q || query.source || query.location || query.exported || query.origin,
+    query.q ||
+      query.source ||
+      query.location ||
+      query.exported ||
+      query.origin ||
+      query.tags.length > 0,
   )
 }
 
@@ -49,6 +57,7 @@ export function leadListHref(query: LeadListQuery, page = query.page) {
   if (query.location) params.set("location", query.location)
   if (query.exported) params.set("exported", query.exported)
   if (query.origin) params.set("origin", query.origin)
+  if (query.tags.length > 0) params.set("tag", query.tags.join(","))
   if (page > 1) params.set("page", String(page))
   const search = params.toString()
   return search ? `/leads?${search}` : "/leads"

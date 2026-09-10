@@ -1,15 +1,12 @@
-import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
-import { auth } from "@/lib/auth"
+import { getSession } from "@/lib/session"
 
 import { loadOverview } from "./overview-data"
 import { OverviewView } from "./overview-view"
 
 export async function OverviewBody() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
 
   if (!session) return redirect("/login")
 

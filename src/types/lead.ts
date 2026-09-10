@@ -75,6 +75,11 @@ const emptyString = z
   .optional()
   .transform((value) => value || undefined)
 
+const tagIdListSchema = z
+  .array(z.coerce.number().int().positive())
+  .max(50)
+  .default([])
+
 export const leadListQuerySchema = z.object({
   q: emptyString,
   source: emptyString,
@@ -91,6 +96,7 @@ export const leadListQuerySchema = z.object({
     .transform((value) =>
       value === "imported" || value === "manual" ? value : undefined,
     ),
+  tags: tagIdListSchema,
   page: z.coerce.number().int().min(1).catch(1),
 })
 

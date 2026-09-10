@@ -1,13 +1,12 @@
-import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 
-import { auth } from "@/lib/auth"
 import {
   buildExportFileName,
   exportMimeType,
   leadsToExportFile,
 } from "@/lib/export-csv"
 import { prisma } from "@/lib/prisma"
+import { getSession } from "@/lib/session"
 import {
   DEFAULT_EXPORT_FILTERS,
   parseStoredExportFilters,
@@ -19,9 +18,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

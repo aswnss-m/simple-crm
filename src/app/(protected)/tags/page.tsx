@@ -1,15 +1,12 @@
-import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getSession } from "@/lib/session"
 
 import { TagsManager } from "./tags-manager"
 
 export default async function TagsPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
 
   if (!session) return redirect("/login")
 

@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation"
-import { headers } from "next/headers"
 import Link from "next/link"
 import { format, formatDistanceToNow } from "date-fns"
 import { FileDown } from "lucide-react"
@@ -31,9 +30,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { PageHeader } from "@/components/page-header"
-import { auth } from "@/lib/auth"
 import { exportFilterLabel } from "@/lib/export-csv"
 import { prisma } from "@/lib/prisma"
+import { getSession } from "@/lib/session"
 import { cn } from "@/lib/utils"
 import {
   EXPORT_DETAIL_PAGE_SIZE,
@@ -51,9 +50,7 @@ export default async function ExportBatchPage({
   params: Promise<{ id: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
 
   if (!session) return redirect("/login")
 
@@ -64,7 +61,7 @@ export default async function ExportBatchPage({
 
   const skip = (page - 1) * EXPORT_DETAIL_PAGE_SIZE
 
-  const [record, items] = await Promise.all([
+  const [record, items, tags] = await Promise.all([
     prisma.export.findFirst({
       where: { id, userId: session.user.id },
       select: {
@@ -92,6 +89,11 @@ export default async function ExportBatchPage({
           },
         },
       },
+    }),
+    prisma.tag.findMany({
+      where: { userId: session.user.id },
+      orderBy: { title: "asc" },
+      select: { id: true, title: true, color: true },
     }),
   ])
 
@@ -133,7 +135,7 @@ export default async function ExportBatchPage({
         <Badge variant="secondary">
           {countFormat.format(record.leadCount)} numbers
         </Badge>
-        <Badge variant="outline">{exportFilterLabel(filters)}</Badge>
+        <Badge variant="outline">{exportFilterLabel(filters, tags)}</Badge>
         {filters?.format === "numbers" ? (
           <Badge variant="outline">Numbers only</Badge>
         ) : (

@@ -14,6 +14,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Textarea } from "@/components/ui/textarea"
+import { flagEmoji, guessFromMobile } from "@/lib/phone-location"
 import type { Tag } from "@/types/tag"
 
 export type LeadFormValues = {
@@ -48,9 +49,30 @@ export function LeadForm({
     onSubmit()
   }
 
-  function patch(patch: Partial<LeadFormValues>) {
-    onChange({ ...values, ...patch })
+  function patch(next: Partial<LeadFormValues>) {
+    onChange({ ...values, ...next })
   }
+
+  function handleMobileChange(mobile: string) {
+    const guessed = guessFromMobile(mobile, { requireCountryPrefix: true })
+    const previousGuess = guessFromMobile(values.mobile, {
+      requireCountryPrefix: true,
+    })
+    const locationWasGuessed =
+      values.location.length === 0 ||
+      values.location === previousGuess?.country
+
+    patch({
+      mobile,
+      ...(locationWasGuessed
+        ? { location: guessed?.country ?? "" }
+        : {}),
+    })
+  }
+
+  const guessed = guessFromMobile(values.mobile, { requireCountryPrefix: true })
+  const locationIsGuessed =
+    Boolean(guessed) && values.location === guessed?.country
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -73,12 +95,16 @@ export function LeadForm({
             <Input
               id="lead-mobile"
               value={values.mobile}
-              onChange={(event) => patch({ mobile: event.target.value })}
-              placeholder="5551234567"
+              onChange={(event) => handleMobileChange(event.target.value)}
+              placeholder="+91 98765 43210"
               disabled={isPending}
               autoComplete="tel"
+              inputMode="tel"
               required
             />
+            <FieldDescription>
+              Start with + and the country code to fill location.
+            </FieldDescription>
           </Field>
           <Field>
             <FieldLabel htmlFor="lead-email">Email</FieldLabel>
@@ -102,6 +128,16 @@ export function LeadForm({
               disabled={isPending}
               autoComplete="off"
             />
+            {locationIsGuessed && guessed ? (
+              <FieldDescription className="animate-in fade-in-0 slide-in-from-top-1">
+                {flagEmoji(guessed.iso_2)} {guessed.country} from the number.
+                You can edit this.
+              </FieldDescription>
+            ) : (
+              <FieldDescription>
+                Fills in from +country code as you type the number.
+              </FieldDescription>
+            )}
           </Field>
         </div>
 

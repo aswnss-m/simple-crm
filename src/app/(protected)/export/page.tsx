@@ -1,9 +1,8 @@
-import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { PageHeader } from "@/components/page-header"
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getSession } from "@/lib/session"
 import {
   DEFAULT_EXPORT_FILTERS,
   EXPORT_PREVIEW_ROWS,
@@ -23,9 +22,7 @@ import {
 export const maxDuration = 60
 
 export default async function ExportPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
 
   if (!session) return redirect("/login")
 
@@ -33,7 +30,7 @@ export default async function ExportPage() {
   const filters = DEFAULT_EXPORT_FILTERS
   const baseWhere = exportBaseWhere(userId, filters)
 
-  const [matching, neverExported, samples, sources, locations, recentExports] =
+  const [matching, neverExported, samples, sources, locations, tags, recentExports] =
     await Promise.all([
       prisma.lead.count({ where: baseWhere }),
       prisma.lead.count({ where: { ...baseWhere, lastExportedAt: null } }),
@@ -52,6 +49,11 @@ export default async function ExportPage() {
         by: ["location"],
         where: { userId, location: { not: null } },
         orderBy: { location: "asc" },
+      }),
+      prisma.tag.findMany({
+        where: { userId },
+        orderBy: { title: "asc" },
+        select: { id: true, title: true, color: true },
       }),
       prisma.export.findMany({
         where: { userId },
@@ -79,12 +81,14 @@ export default async function ExportPage() {
         locations={locations.flatMap((item) =>
           item.location ? [item.location] : [],
         )}
+        tags={tags}
         initialFilters={filters}
         initialPreview={computeExportPreview(matching, neverExported, filters)}
         initialSamples={samples}
       />
 
       <ExportHistory
+        tags={tags}
         exports={recentExports.map((item) => ({
           id: item.id,
           fileName: item.fileName,

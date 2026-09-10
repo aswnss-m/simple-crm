@@ -1,63 +1,63 @@
 "use client"
 
 import type { ComponentProps } from "react"
+import Link from "next/link"
 
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import type { Session } from "@/lib/auth-client"
 import {
   ContactRoundIcon,
   DownloadIcon,
   FrameIcon,
   GalleryVerticalEndIcon,
   ImportIcon,
+  PlusIcon,
   TagsIcon,
 } from "lucide-react"
-import type { Session } from "@/lib/auth-client"
 
-const data = {
-  teams: [
-    {
-      name: "Simple CRM",
-      logo: <GalleryVerticalEndIcon />,
-      plan: "Workspace",
+const nav = [
+  {
+    name: "Overview",
+    url: "/overview",
+    icon: <FrameIcon />,
+  },
+  {
+    name: "Contacts",
+    url: "/leads",
+    icon: <ContactRoundIcon />,
+    action: {
+      href: "/leads/new",
+      label: "New contact",
+      icon: <PlusIcon />,
     },
-  ],
-  nav: [
-    {
-      name: "Overview",
-      url: "/overview",
-      icon: <FrameIcon />,
-    },
-    {
-      name: "Contacts",
-      url: "/leads",
-      icon: <ContactRoundIcon />,
-    },
-    {
-      name: "Import",
-      url: "/import",
-      icon: <ImportIcon />,
-    },
-    {
-      name: "Export",
-      url: "/export",
-      icon: <DownloadIcon />,
-    },
-    {
-      name: "Tags",
-      url: "/tags",
-      icon: <TagsIcon />,
-    },
-  ],
-}
+  },
+  {
+    name: "Import",
+    url: "/import",
+    icon: <ImportIcon />,
+  },
+  {
+    name: "Export",
+    url: "/export",
+    icon: <DownloadIcon />,
+  },
+  {
+    name: "Tags",
+    url: "/tags",
+    icon: <TagsIcon />,
+  },
+]
 
 export function AppSidebar({
   session,
@@ -66,10 +66,23 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="lg"
+              tooltip="SimpleCRM"
+              render={<Link href="/overview" />}
+            >
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <GalleryVerticalEndIcon />
+              </div>
+              <span className="truncate font-bold tracking-tight">SimpleCRM</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavProjects projects={data.nav} />
+        <NavProjects projects={nav} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={session?.user} />

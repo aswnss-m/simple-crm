@@ -1,4 +1,5 @@
 import type { ExportFilters, ExportPreview } from "@/types/export"
+import { tagFilterWhere } from "@/lib/tag-filter"
 
 export const exportLeadSelect = {
   id: true,
@@ -15,12 +16,13 @@ export const exportLeadOrderBy = [
 
 export function exportBaseWhere(
   userId: string,
-  filters: Pick<ExportFilters, "source" | "location">,
+  filters: Pick<ExportFilters, "source" | "location" | "tags">,
 ) {
   return {
     userId,
     ...(filters.source ? { source: filters.source } : {}),
     ...(filters.location ? { location: filters.location } : {}),
+    ...tagFilterWhere(filters.tags),
   }
 }
 

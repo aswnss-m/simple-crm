@@ -1,6 +1,6 @@
 import { FileSpreadsheet, Clock3 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
-import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
 import {
@@ -12,16 +12,13 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { PageHeader } from "@/components/page-header"
-import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getSession } from "@/lib/session"
 
 import { ImportForm } from "./import-form"
-import { redirect } from "next/navigation"
 
 export default async function ImportPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getSession()
 
   if (!session) return redirect('/login');
 
