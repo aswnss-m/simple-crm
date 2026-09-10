@@ -73,6 +73,7 @@ function revalidateLeadPaths(id?: string) {
   revalidatePath("/leads")
   revalidatePath("/tags")
   revalidatePath("/import")
+  revalidatePath("/overview")
   if (id) revalidatePath(`/leads/${id}`)
 }
 

@@ -102,6 +102,7 @@ model Lead {
   @@index([userId, name])
   @@index([userId, source])
   @@index([userId, location])
+  @@index([userId, createdAt])
   @@index([userId, lastExportedAt])
   @@map("lead")
 }
