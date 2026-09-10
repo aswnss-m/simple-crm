@@ -4,6 +4,7 @@ import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 
 import { auth } from "@/lib/auth"
+import { locationFromMobile } from "@/lib/phone-location"
 import { prisma } from "@/lib/prisma"
 import { trycatch } from "@/lib/utils"
 import {
@@ -54,7 +55,7 @@ export async function importCsv(input: unknown): Promise<ImportCsvResult> {
             name: row.name,
             mobile: row.mobile,
             email: row.email,
-            location: row.location,
+            location: row.location ?? locationFromMobile(row.mobile),
             source,
             userId,
             importId: record.id,

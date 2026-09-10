@@ -3,6 +3,7 @@ import {
   type CsvRow,
   type MappedLead,
 } from "@/types/csv"
+import { locationFromMobile } from "@/lib/phone-location"
 
 export function normalizeHeader(header: string) {
   return header.replace(/^\uFEFF/, "").toLowerCase().trim()
@@ -42,11 +43,16 @@ export function mapRows(rows: CsvRow[]) {
     if (isEmptyRow(row)) continue
 
     const headers = headerMap(row)
+    const mobile = cellValue(row, headers.mobile ?? "mobile").replaceAll(" ", "")
+    const location =
+      optionalValue(cellValue(row, headers.location ?? "location")) ??
+      locationFromMobile(mobile)
+
     const mapped: MappedLead = {
       name: cellValue(row, headers.name ?? "name"),
-      mobile: cellValue(row, headers.mobile ?? "mobile"),
+      mobile,
       email: optionalValue(cellValue(row, headers.email ?? "email")),
-      location: optionalValue(cellValue(row, headers.location ?? "location")),
+      location,
     }
 
     if (!mapped.name || !mapped.mobile) {

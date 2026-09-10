@@ -330,7 +330,8 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
       <CardHeader>
         <CardTitle>Upload your file</CardTitle>
         <CardDescription>
-          Download the template, fill it in, and upload the CSV.
+          Download the template, fill it in, and upload the CSV. Blank
+          locations are filled from the phone country code.
         </CardDescription>
       </CardHeader>
 

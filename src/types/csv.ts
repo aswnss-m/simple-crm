@@ -23,8 +23,8 @@ export const COLUMN_LABELS: Record<TemplateColumn, string> = {
 
 export const CSV_TEMPLATE = [
   TEMPLATE_COLUMNS.join(","),
-  "Jane Doe,5551234567,jane@example.com,Austin",
-  "John Smith,5559876543,,",
+  "Jane Doe,+14155552671,jane@example.com,Austin",
+  "John Smith,+447911123456,,",
 ].join("\n")
 
 export const PARSER_OPTIONS = {
@@ -46,7 +46,12 @@ export type MappedLead = {
 
 export const csvLeadRowSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  mobile: z.string().trim().min(1).max(50),
+  mobile: z
+    .string()
+    .trim()
+    .min(1)
+    .max(50)
+    .transform((value) => value.replaceAll(" ", "")),
   email: z
     .union([z.email().max(320), z.literal("")])
     .optional()
