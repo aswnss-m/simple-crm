@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/page-header"
 import type { LeadDetail } from "@/types/lead"
 import type { Tag } from "@/types/tag"
@@ -87,14 +88,17 @@ export function LeadDetail({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <PageHeader title={lead.name} description={lead.mobile}>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isPending}
-          render={<Link href="/leads" />}
+        <Link
+          href="/leads"
+          aria-disabled={isPending || undefined}
+          tabIndex={isPending ? -1 : undefined}
+          className={cn(
+            buttonVariants({ variant: "outline" }),
+            isPending && "pointer-events-none opacity-50"
+          )}
         >
           All contacts
-        </Button>
+        </Link>
       </PageHeader>
 
       <Card>

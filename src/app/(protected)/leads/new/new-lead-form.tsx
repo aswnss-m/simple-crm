@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/page-header"
 import type { Tag } from "@/types/tag"
 
@@ -74,14 +75,17 @@ export function NewLeadForm({ tags }: { tags: Tag[] }) {
             extraActions={
               <>
                 {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isPending}
-                  render={<Link href="/leads" />}
+                <Link
+                  href="/leads"
+                  aria-disabled={isPending || undefined}
+                  tabIndex={isPending ? -1 : undefined}
+                  className={cn(
+                    buttonVariants({ variant: "outline" }),
+                    isPending && "pointer-events-none opacity-50"
+                  )}
                 >
                   Cancel
-                </Button>
+                </Link>
               </>
             }
           />

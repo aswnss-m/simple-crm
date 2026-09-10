@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { ContactRound, Plus, Search } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -54,10 +54,10 @@ export function LeadsList({
         title="Contacts"
         description="Everyone in your CRM. Open a contact to view or edit details."
       >
-        <Button render={<Link href="/leads/new" />}>
+        <Link href="/leads/new" className={buttonVariants()}>
           <Plus />
           New contact
-        </Button>
+        </Link>
       </PageHeader>
 
       <Card>
@@ -88,17 +88,19 @@ export function LeadsList({
                 Add one by hand, or import a CSV.
               </p>
               <div className="mt-4 flex gap-2">
-                <Button size="sm" render={<Link href="/leads/new" />}>
+                <Link
+                  href="/leads/new"
+                  className={buttonVariants({ size: "sm" })}
+                >
                   <Plus />
                   New contact
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  render={<Link href="/import" />}
+                </Link>
+                <Link
+                  href="/import"
+                  className={buttonVariants({ size: "sm", variant: "outline" })}
                 >
                   Import CSV
-                </Button>
+                </Link>
               </div>
             </div>
           ) : leads.length === 0 ? (

@@ -18,7 +18,7 @@ import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -732,13 +732,12 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
 
           {phase === "success" ? (
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                render={<Link href="/leads" />}
+              <Link
+                href="/leads"
+                className={buttonVariants({ variant: "outline" })}
               >
                 View contacts
-              </Button>
+              </Link>
               <Button type="button" onClick={resetFile}>
                 Done
               </Button>
