@@ -123,6 +123,7 @@ export function LeadsList({
                     <TableHead>Email</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Source</TableHead>
+                    <TableHead>Exports</TableHead>
                     <TableHead>Tags</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -145,6 +146,9 @@ export function LeadsList({
                       <TableCell>{lead.email ?? "—"}</TableCell>
                       <TableCell>{lead.location ?? "—"}</TableCell>
                       <TableCell>{lead.source}</TableCell>
+                      <TableCell className="tabular-nums text-muted-foreground">
+                        {lead.exportCount > 0 ? `${lead.exportCount}×` : "Never"}
+                      </TableCell>
                       <TableCell>
                         {lead.tags.length > 0 ? (
                           <div className="flex max-w-56 flex-wrap gap-1">

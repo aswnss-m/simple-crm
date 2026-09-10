@@ -37,6 +37,13 @@ export const deleteLeadSchema = z.object({
 
 export type LeadFields = z.infer<typeof leadFieldsSchema>
 
+export type LeadExportBatch = {
+  id: string
+  fileName: string | null
+  createdAt: string
+  leadCount: number
+}
+
 export type LeadListItem = {
   id: string
   name: string
@@ -45,6 +52,7 @@ export type LeadListItem = {
   location: string | null
   source: string
   createdAt: string
+  exportCount: number
   tags: Tag[]
 }
 
@@ -52,6 +60,7 @@ export type LeadDetail = LeadListItem & {
   notes: string | null
   lastExportedAt: string | null
   importFileName: string | null
+  exportHistory: LeadExportBatch[]
 }
 
 export type LeadActionResult =

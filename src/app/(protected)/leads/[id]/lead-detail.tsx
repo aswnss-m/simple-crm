@@ -107,7 +107,10 @@ export function LeadDetail({
           <CardDescription>
             Added {createdLabel}
             {lead.importFileName ? ` · imported from ${lead.importFileName}` : ""}
-            {exportedLabel ? ` · last exported ${exportedLabel}` : ""}
+            {lead.exportCount > 0
+              ? ` · exported ${lead.exportCount} ${lead.exportCount === 1 ? "time" : "times"}`
+              : " · never exported"}
+            {exportedLabel ? `, last ${exportedLabel}` : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -132,6 +135,49 @@ export function LeadDetail({
               </>
             }
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Export history</CardTitle>
+          <CardDescription>
+            Batches that included this number, and how many times it has gone out.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {lead.exportHistory.length > 0 ? (
+            <div className="divide-y rounded-lg border">
+              {lead.exportHistory.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/export/${item.id}`}
+                  className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-muted/40"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {item.fileName ?? "Export batch"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(item.createdAt), {
+                        addSuffix: true,
+                      })}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {item.leadCount.toLocaleString("en-IN")} numbers
+                  </p>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="flex min-h-24 flex-col items-center justify-center rounded-lg border border-dashed text-center">
+              <p className="text-sm font-medium">Not exported yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                This number will show up here after it is included in a batch.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

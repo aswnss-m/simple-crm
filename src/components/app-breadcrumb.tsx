@@ -28,7 +28,9 @@ export function AppBreadcrumb() {
 
           const isIdLike = segment.length > 16 && !segment.includes("-")
           const label = isIdLike
-            ? "Lead"
+            ? pathname.startsWith("/export")
+              ? "Batch"
+              : "Lead"
             : segment
                 .replace(/-/g, " ")
                 .replace(/\b\w/g, (char) => char.toUpperCase())

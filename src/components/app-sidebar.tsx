@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar"
 import {
   ContactRoundIcon,
+  DownloadIcon,
   FrameIcon,
   GalleryVerticalEndIcon,
   ImportIcon,
@@ -44,6 +45,11 @@ const data = {
       name: "Import",
       url: "/import",
       icon: <ImportIcon />,
+    },
+    {
+      name: "Export",
+      url: "/export",
+      icon: <DownloadIcon />,
     },
     {
       name: "Tags",

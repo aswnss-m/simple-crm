@@ -32,10 +32,23 @@ export default async function LeadPage({
         notes: true,
         createdAt: true,
         lastExportedAt: true,
+        exportCount: true,
         import: { select: { fileName: true } },
         tags: {
           select: { id: true, title: true, color: true },
           orderBy: { title: "asc" },
+        },
+        exportItems: {
+          select: {
+            export: {
+              select: {
+                id: true,
+                fileName: true,
+                createdAt: true,
+                leadCount: true,
+              },
+            },
+          },
         },
       },
     }),
@@ -62,6 +75,18 @@ export default async function LeadPage({
         createdAt: lead.createdAt.toISOString(),
         lastExportedAt: lead.lastExportedAt?.toISOString() ?? null,
         importFileName: lead.import?.fileName ?? null,
+        exportCount: lead.exportCount,
+        exportHistory: [...lead.exportItems]
+          .sort(
+            (a, b) =>
+              b.export.createdAt.getTime() - a.export.createdAt.getTime(),
+          )
+          .map((item) => ({
+            id: item.export.id,
+            fileName: item.export.fileName,
+            createdAt: item.export.createdAt.toISOString(),
+            leadCount: item.export.leadCount,
+          })),
         tags: lead.tags,
       }}
       tags={tags}

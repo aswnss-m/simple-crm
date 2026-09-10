@@ -93,6 +93,8 @@ model Lead {
   importId       String?
   import         Import?   @relation(fields: [importId], references: [id], onDelete: SetNull)
   lastExportedAt DateTime?
+  exportCount    Int       @default(0)
+  exportItems    ExportItem[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -123,16 +125,28 @@ model Tag {
 }
 
 model Export {
-  id         String   @id @default(cuid())
+  id         String       @id @default(cuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   leadCount  Int
   fileName   String?
-  filters    Json?    // snapshot of name/mobile/location/source/export-age used
-  createdAt  DateTime @default(now())
+  filters    Json?
+  createdAt  DateTime     @default(now())
+  items      ExportItem[]
 
   @@index([userId, createdAt])
   @@map("export")
+}
+
+model ExportItem {
+  exportId String
+  leadId   String
+  export   Export @relation(fields: [exportId], references: [id], onDelete: Cascade)
+  lead     Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@id([exportId, leadId])
+  @@index([leadId])
+  @@map("export_item")
 }
 
 model Import {

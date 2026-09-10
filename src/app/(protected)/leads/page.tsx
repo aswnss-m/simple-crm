@@ -62,6 +62,7 @@ export default async function LeadsPage({
         location: true,
         source: true,
         createdAt: true,
+        exportCount: true,
         tags: {
           select: { id: true, title: true, color: true },
           orderBy: { title: "asc" },
