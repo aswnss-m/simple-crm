@@ -103,7 +103,8 @@ export function LeadForm({
               required
             />
             <FieldDescription>
-              Start with + and the country code to fill location.
+              Digits only, with optional spaces and a leading +. Start with +
+              and the country code to fill location.
             </FieldDescription>
           </Field>
           <Field>

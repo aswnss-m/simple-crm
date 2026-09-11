@@ -11,8 +11,20 @@ export type PhoneLocation = {
   iso_2: string
 }
 
+export const MOBILE_FORMAT_ERROR =
+  "Mobile numbers can only contain digits. Spaces and a leading + are ok."
+
 const COUNTRIES = countryCodes as Record<string, Country>
 const MAX_CODE_LEN = 4
+
+export function stripMobileSpaces(mobile: string) {
+  return mobile.replaceAll(" ", "")
+}
+
+export function isNumericMobile(mobile: string) {
+  const cleaned = stripMobileSpaces(mobile)
+  return cleaned.length > 0 && Number.isFinite(Number(cleaned))
+}
 
 function lookupDigits(mobile: string) {
   const digits = mobile.replaceAll(/[^\d+]/g, "")

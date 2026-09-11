@@ -1,9 +1,14 @@
 import {
   REQUIRED_COLUMNS,
   type CsvRow,
+  type InvalidMobileRow,
   type MappedLead,
 } from "@/types/csv"
-import { locationFromMobile } from "@/lib/phone-location"
+import {
+  isNumericMobile,
+  locationFromMobile,
+  stripMobileSpaces,
+} from "@/lib/phone-location"
 
 export function normalizeHeader(header: string) {
   return header.replace(/^\uFEFF/, "").toLowerCase().trim()
@@ -37,33 +42,42 @@ export function hasTemplateHeaders(rows: CsvRow[]) {
 
 export function mapRows(rows: CsvRow[]) {
   const valid: MappedLead[] = []
+  const invalidMobiles: InvalidMobileRow[] = []
   let invalidCount = 0
 
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
     if (isEmptyRow(row)) continue
 
     const headers = headerMap(row)
-    const mobile = cellValue(row, headers.mobile ?? "mobile").replaceAll(" ", "")
-    const location =
-      optionalValue(cellValue(row, headers.location ?? "location")) ??
-      locationFromMobile(mobile)
+    const name = cellValue(row, headers.name ?? "name")
+    const mobileRaw = cellValue(row, headers.mobile ?? "mobile")
+    const mobile = stripMobileSpaces(mobileRaw)
 
-    const mapped: MappedLead = {
-      name: cellValue(row, headers.name ?? "name"),
-      mobile,
-      email: optionalValue(cellValue(row, headers.email ?? "email")),
-      location,
-    }
-
-    if (!mapped.name || !mapped.mobile) {
+    if (!name || !mobile) {
       invalidCount += 1
       continue
     }
 
-    valid.push(mapped)
+    if (!isNumericMobile(mobile)) {
+      invalidMobiles.push({
+        rowNumber: index + 2,
+        name,
+        mobile: mobileRaw,
+      })
+      continue
+    }
+
+    valid.push({
+      name,
+      mobile,
+      email: optionalValue(cellValue(row, headers.email ?? "email")),
+      location:
+        optionalValue(cellValue(row, headers.location ?? "location")) ??
+        locationFromMobile(mobile),
+    })
   }
 
-  return { valid, invalidCount }
+  return { valid, invalidCount, invalidMobiles }
 }
 
 export function formatBytes(bytes: number) {

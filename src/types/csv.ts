@@ -1,5 +1,10 @@
 import { z } from "zod"
 
+import {
+  isNumericMobile,
+  MOBILE_FORMAT_ERROR,
+  stripMobileSpaces,
+} from "@/lib/phone-location"
 import { TAG_COLORS } from "./tag"
 
 export { TAG_COLORS }
@@ -8,6 +13,7 @@ export type { Tag as ImportTag } from "./tag"
 export const MAX_FILE_SIZE = 10 * 1024 * 1024
 export const MAX_IMPORT_ROWS = 5_000
 export const PREVIEW_ROWS = 25
+export const ERROR_PREVIEW_ROWS = 50
 
 export const TEMPLATE_COLUMNS = ["name", "mobile", "email", "location"] as const
 export const REQUIRED_COLUMNS = ["name", "mobile"] as const
@@ -44,6 +50,12 @@ export type MappedLead = {
   location?: string
 }
 
+export type InvalidMobileRow = {
+  rowNumber: number
+  name: string
+  mobile: string
+}
+
 export const csvLeadRowSchema = z.object({
   name: z.string().trim().min(1).max(200),
   mobile: z
@@ -51,7 +63,10 @@ export const csvLeadRowSchema = z.object({
     .trim()
     .min(1)
     .max(50)
-    .transform((value) => value.replaceAll(" ", "")),
+    .refine((value) => isNumericMobile(value), {
+      message: MOBILE_FORMAT_ERROR,
+    })
+    .transform((value) => stripMobileSpaces(value)),
   email: z
     .union([z.email().max(320), z.literal("")])
     .optional()

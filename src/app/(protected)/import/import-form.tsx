@@ -62,6 +62,7 @@ import { cn } from "@/lib/utils"
 import {
   COLUMN_LABELS,
   CSV_TEMPLATE,
+  ERROR_PREVIEW_ROWS,
   MAX_FILE_SIZE,
   MAX_IMPORT_ROWS,
   PARSER_OPTIONS,
@@ -71,6 +72,7 @@ import {
   type CsvRow,
   type ImportCsvResult,
   type ImportTag,
+  type InvalidMobileRow,
   type MappedLead,
 } from "@/types/csv"
 
@@ -121,8 +123,15 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
     () => mapped.valid.slice(0, PREVIEW_ROWS),
     [mapped.valid],
   )
+  const invalidMobilePreview = useMemo(
+    () => mapped.invalidMobiles.slice(0, ERROR_PREVIEW_ROWS),
+    [mapped.invalidMobiles],
+  )
+  const hasInvalidMobiles = mapped.invalidMobiles.length > 0
   const canImport =
-    mapped.valid.length > 0 && mapped.valid.length <= MAX_IMPORT_ROWS
+    mapped.valid.length > 0 &&
+    mapped.valid.length <= MAX_IMPORT_ROWS &&
+    !hasInvalidMobiles
   const tagQuery = tagDraft.trim().toLowerCase()
   const unusedTags = useMemo(
     () =>
@@ -262,7 +271,7 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
     }
 
     const next = mapRows(usable)
-    if (next.valid.length === 0) {
+    if (next.valid.length === 0 && next.invalidMobiles.length === 0) {
       toast.error("Every row needs a name and mobile.")
       resetFile()
       return
@@ -331,7 +340,9 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
         <CardTitle>Upload your file</CardTitle>
         <CardDescription>
           Download the template, fill it in, and upload the CSV. Blank
-          locations are filled from the phone country code.
+          locations are filled from the phone country code. Mobile numbers
+          may include spaces and a leading +, but not dashes or other
+          characters.
         </CardDescription>
       </CardHeader>
 
@@ -346,8 +357,15 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{fileInfo.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatBytes(fileInfo.size)} · {mapped.valid.length} contacts
-                    {mapped.invalidCount > 0
+                    {formatBytes(fileInfo.size)}
+                    {hasInvalidMobiles
+                      ? ` · ${mapped.invalidMobiles.length} invalid mobile ${
+                          mapped.invalidMobiles.length === 1
+                            ? "number"
+                            : "numbers"
+                        }`
+                      : ` · ${mapped.valid.length} contacts`}
+                    {!hasInvalidMobiles && mapped.invalidCount > 0
                       ? ` · ${mapped.invalidCount} skipped`
                       : ""}
                   </p>
@@ -365,7 +383,12 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
               </Button>
             </div>
 
-            {preview.length > 0 ? (
+            {hasInvalidMobiles ? (
+              <InvalidMobilesTable
+                rows={invalidMobilePreview}
+                total={mapped.invalidMobiles.length}
+              />
+            ) : preview.length > 0 ? (
               <CsvPreviewTable
                 rows={preview}
                 total={mapped.valid.length}
@@ -379,15 +402,17 @@ export function ImportForm({ tags }: { tags: ImportTag[] }) {
                 onClick={resetFile}
                 disabled={busy}
               >
-                Cancel
+                {hasInvalidMobiles ? "Choose a different file" : "Cancel"}
               </Button>
-              <Button
-                type="button"
-                onClick={handleImport}
-                disabled={!canImport || busy}
-              >
-                Import {mapped.valid.length} contacts
-              </Button>
+              {hasInvalidMobiles ? null : (
+                <Button
+                  type="button"
+                  onClick={handleImport}
+                  disabled={!canImport || busy}
+                >
+                  Import {mapped.valid.length} contacts
+                </Button>
+              )}
             </div>
           </div>
         ) : (
@@ -840,6 +865,57 @@ function CsvPreviewTable({
           ))}
         </TableBody>
       </Table>
+    </div>
+  )
+}
+
+function InvalidMobilesTable({
+  rows,
+  total,
+}: {
+  rows: InvalidMobileRow[]
+  total: number
+}) {
+  return (
+    <div className="space-y-3">
+      <Alert variant="destructive">
+        <CircleAlert />
+        <AlertTitle>
+          {total.toLocaleString()}{" "}
+          {total === 1 ? "row has" : "rows have"} an invalid mobile number
+        </AlertTitle>
+        <AlertDescription>
+          Import is blocked. Use digits only — spaces and a leading + are ok.
+          Fix these rows in your CSV and upload again.
+        </AlertDescription>
+      </Alert>
+      <p className="text-xs text-muted-foreground">
+        {total > ERROR_PREVIEW_ROWS
+          ? `Showing the first ${ERROR_PREVIEW_ROWS} of ${total.toLocaleString()} invalid rows. Row numbers include the header.`
+          : "Row numbers include the header row."}
+      </p>
+      <div className="max-h-80 overflow-y-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Row</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Mobile</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={`${row.rowNumber}-${row.mobile}`}>
+                <TableCell className="tabular-nums">{row.rowNumber}</TableCell>
+                <TableCell>{row.name || "—"}</TableCell>
+                <TableCell className="font-medium text-destructive">
+                  {row.mobile}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

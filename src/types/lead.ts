@@ -1,10 +1,23 @@
 import { z } from "zod"
 
+import {
+  isNumericMobile,
+  MOBILE_FORMAT_ERROR,
+  stripMobileSpaces,
+} from "@/lib/phone-location"
 import type { Tag } from "./tag"
 
 export const leadFieldsSchema = z.object({
   name: z.string().trim().min(1, "Add a name.").max(200),
-  mobile: z.string().trim().min(1, "Add a mobile number.").max(50),
+  mobile: z
+    .string()
+    .trim()
+    .min(1, "Add a mobile number.")
+    .max(50)
+    .refine((value) => isNumericMobile(value), {
+      message: MOBILE_FORMAT_ERROR,
+    })
+    .transform((value) => stripMobileSpaces(value)),
   email: z
     .union([z.email("Enter a valid email.").max(320), z.literal("")])
     .optional()
