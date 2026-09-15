@@ -1,12 +1,13 @@
 "use client"
 
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ContactRound, Plus, Search } from "lucide-react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -14,6 +15,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Table,
   TableBody,
@@ -23,12 +32,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { PageHeader } from "@/components/page-header"
+import { isNumericMobile } from "@/lib/phone-location"
 import { cn } from "@/lib/utils"
 import { LEADS_PAGE_SIZE, type LeadListItem, type LeadListQuery } from "@/types/lead"
 import type { Tag } from "@/types/tag"
 
+import { deleteInvalidMobileLeads } from "./leads.action"
 import { LeadsFilters } from "./leads-filters"
 import { LeadsPagination } from "./leads-pagination"
+import { leadListHref } from "./leads-query"
 
 export function LeadsList({
   leads,
@@ -36,6 +48,7 @@ export function LeadsList({
   total,
   emptyLibrary,
   filtered,
+  invalidMobileCount,
   sources,
   locations,
   tags,
@@ -45,14 +58,44 @@ export function LeadsList({
   total: number
   emptyLibrary: boolean
   filtered: boolean
+  invalidMobileCount: number
   sources: string[]
   locations: string[]
   tags: Tag[]
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const from = total === 0 ? 0 : (query.page - 1) * LEADS_PAGE_SIZE + 1
   const to = Math.min(query.page * LEADS_PAGE_SIZE, total)
+  const reviewingInvalid = query.mobile === "invalid"
+  const invalidLabel =
+    invalidMobileCount === 1
+      ? "1 contact has text in the mobile field"
+      : `${invalidMobileCount.toLocaleString()} contacts have text in the mobile field`
+
+  function confirmDeleteInvalid() {
+    startTransition(async () => {
+      const result = await deleteInvalidMobileLeads()
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+
+      setDeleteOpen(false)
+      if (result.deletedCount === 0) {
+        toast.message("No contacts with invalid numbers were left.")
+      } else {
+        toast.success(
+          result.deletedCount === 1
+            ? "Deleted 1 contact with an invalid number."
+            : `Deleted ${result.deletedCount.toLocaleString()} contacts with invalid numbers.`,
+        )
+      }
+      router.replace("/leads")
+      router.refresh()
+    })
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
@@ -86,6 +129,45 @@ export function LeadsList({
               tags={tags}
               startTransition={startTransition}
             />
+          )}
+
+          {emptyLibrary || invalidMobileCount === 0 ? null : (
+            <div className="flex flex-col gap-3 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{invalidLabel}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {reviewingInvalid
+                    ? "Open a contact to replace the text with a number, or delete them all. These will not go out in exports."
+                    : "Likely leftover from an old CSV import. They will not go out in exports until the number is fixed."}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                {reviewingInvalid ? (
+                  <Link
+                    href={leadListHref({ ...query, mobile: undefined, page: 1 })}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    Show all
+                  </Link>
+                ) : (
+                  <Link
+                    href={leadListHref({ ...query, mobile: "invalid", page: 1 })}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    Review
+                  </Link>
+                )}
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  Delete all
+                </Button>
+              </div>
+            </div>
           )}
 
           {emptyLibrary ? (
@@ -156,7 +238,13 @@ export function LeadsList({
                           {lead.name}
                         </Link>
                       </TableCell>
-                      <TableCell>{lead.mobile}</TableCell>
+                      <TableCell
+                        className={cn(
+                          !isNumericMobile(lead.mobile) && "text-destructive",
+                        )}
+                      >
+                        {lead.mobile}
+                      </TableCell>
                       <TableCell>{lead.email ?? "—"}</TableCell>
                       <TableCell>{lead.location ?? "—"}</TableCell>
                       <TableCell>{lead.source}</TableCell>
@@ -199,6 +287,42 @@ export function LeadsList({
           <LeadsPagination query={query} total={total} />
         </CardContent>
       </Card>
+
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (!isPending) setDeleteOpen(open)
+        }}
+      >
+        <DialogContent className="sm:max-w-sm" showCloseButton={!isPending}>
+          <DialogHeader>
+            <DialogTitle>Delete invalid numbers</DialogTitle>
+            <DialogDescription>
+              Delete {invalidMobileCount.toLocaleString()}{" "}
+              {invalidMobileCount === 1 ? "contact" : "contacts"} whose mobile
+              field is text instead of a number? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteOpen(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmDeleteInvalid}
+              disabled={isPending}
+            >
+              {isPending ? "Deleting…" : "Delete contacts"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

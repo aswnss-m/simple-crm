@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 
 import { PageHeader } from "@/components/page-header"
 import { prisma } from "@/lib/prisma"
+import { listInvalidMobileIds } from "@/lib/mobile-query"
 import { getSession } from "@/lib/session"
 import {
   DEFAULT_EXPORT_FILTERS,
@@ -28,14 +29,15 @@ export default async function ExportPage() {
 
   const userId = session.user.id
   const filters = DEFAULT_EXPORT_FILTERS
-  const baseWhere = exportBaseWhere(userId, filters)
+  const invalidIds = await listInvalidMobileIds(userId)
+  const baseWhere = exportBaseWhere(userId, filters, invalidIds)
 
   const [matching, neverExported, samples, sources, locations, tags, recentExports] =
     await Promise.all([
       prisma.lead.count({ where: baseWhere }),
       prisma.lead.count({ where: { ...baseWhere, lastExportedAt: null } }),
       prisma.lead.findMany({
-        where: exportSelectWhere(userId, filters),
+        where: exportSelectWhere(userId, filters, invalidIds),
         orderBy: exportLeadOrderBy,
         take: EXPORT_PREVIEW_ROWS,
         select: exportLeadSelect,

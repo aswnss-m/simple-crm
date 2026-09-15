@@ -2,15 +2,24 @@ import { unstable_cache } from "next/cache"
 
 import { prisma } from "@/lib/prisma"
 import { leadCacheTag } from "@/lib/lead-cache"
+import {
+  countInvalidMobiles,
+  listInvalidMobileIds,
+} from "@/lib/mobile-query"
 import { tagFilterWhere } from "@/lib/tag-filter"
 import { LEADS_PAGE_SIZE, type LeadListItem, type LeadListQuery } from "@/types/lead"
 import type { Tag } from "@/types/tag"
 
 import { leadListSkip } from "./leads-query"
 
-function leadListWhere(userId: string, query: LeadListQuery) {
+function leadListWhere(
+  userId: string,
+  query: LeadListQuery,
+  invalidIds?: string[],
+) {
   return {
     userId,
+    ...(query.mobile === "invalid" ? { id: { in: invalidIds ?? [] } } : {}),
     ...(query.q
       ? {
           OR: [
@@ -40,6 +49,7 @@ export type LeadListPage = {
   leads: LeadListItem[]
   total: number
   totalAll: number
+  invalidMobileCount: number
   sources: string[]
   locations: string[]
   tags: Tag[]
@@ -50,10 +60,13 @@ async function queryLeadList(
   queryKey: string,
 ): Promise<LeadListPage> {
   const query = JSON.parse(queryKey) as LeadListQuery
-  const where = leadListWhere(userId, query)
+  const invalidIds =
+    query.mobile === "invalid" ? await listInvalidMobileIds(userId) : undefined
+  const where = leadListWhere(userId, query, invalidIds)
   const skip = leadListSkip(query)
 
-  const [leads, total, totalAll, sources, locations, tags] = await Promise.all([
+  const [leads, total, totalAll, sources, locations, tags, invalidMobileCount] =
+    await Promise.all([
     prisma.lead.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -91,6 +104,9 @@ async function queryLeadList(
       orderBy: { title: "asc" },
       select: { id: true, title: true, color: true },
     }),
+    invalidIds
+      ? Promise.resolve(invalidIds.length)
+      : countInvalidMobiles(userId),
   ])
 
   return {
@@ -100,6 +116,7 @@ async function queryLeadList(
     })),
     total,
     totalAll,
+    invalidMobileCount,
     sources: sources.map((item) => item.source),
     locations: locations.flatMap((item) =>
       item.location ? [item.location] : [],

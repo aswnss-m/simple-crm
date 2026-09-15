@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { isNumericMobile } from "@/lib/phone-location"
 
 import type {
   OverviewBreakdownItem,
@@ -155,6 +156,27 @@ export function OverviewView({ data }: { data: OverviewData }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {data.invalidMobileCount > 0 ? (
+        <div className="flex flex-col gap-3 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">
+              {data.invalidMobileCount === 1
+                ? "1 contact has text in the mobile field"
+                : `${formatCount(data.invalidMobileCount)} contacts have text in the mobile field`}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Leftover from an old CSV import. They will not go out in exports
+              until the number is fixed.
+            </p>
+          </div>
+          <Link
+            href="/leads?mobile=invalid"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            Review
+          </Link>
+        </div>
+      ) : null}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card size="sm">
           <CardHeader>
@@ -279,7 +301,14 @@ export function OverviewView({ data }: { data: OverviewData }) {
                           {lead.name}
                         </Link>
                       </TableCell>
-                      <TableCell className="tabular-nums">{lead.mobile}</TableCell>
+                      <TableCell
+                        className={cn(
+                          "tabular-nums",
+                          !isNumericMobile(lead.mobile) && "text-destructive",
+                        )}
+                      >
+                        {lead.mobile}
+                      </TableCell>
                       <TableCell className="max-w-36 truncate">
                         {lead.location ?? "—"}
                       </TableCell>

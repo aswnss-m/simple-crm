@@ -14,7 +14,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Textarea } from "@/components/ui/textarea"
-import { flagEmoji, guessFromMobile } from "@/lib/phone-location"
+import { flagEmoji, guessFromMobile, isNumericMobile } from "@/lib/phone-location"
 import type { Tag } from "@/types/tag"
 
 export type LeadFormValues = {
@@ -102,10 +102,17 @@ export function LeadForm({
               inputMode="tel"
               required
             />
-            <FieldDescription>
-              Digits only, with optional spaces and a leading +. Start with +
-              and the country code to fill location.
-            </FieldDescription>
+            {values.mobile.length > 0 && !isNumericMobile(values.mobile) ? (
+              <FieldDescription className="text-destructive">
+                This looks like text, not a number. Replace it with digits so
+                the contact can be exported.
+              </FieldDescription>
+            ) : (
+              <FieldDescription>
+                Digits only, with optional spaces and a leading +. Start with +
+                and the country code to fill location.
+              </FieldDescription>
+            )}
           </Field>
           <Field>
             <FieldLabel htmlFor="lead-email">Email</FieldLabel>

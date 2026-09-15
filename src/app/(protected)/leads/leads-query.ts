@@ -19,6 +19,7 @@ const emptyQuery: LeadListQuery = {
   location: undefined,
   exported: undefined,
   origin: undefined,
+  mobile: undefined,
   tags: [],
   page: 1,
 }
@@ -32,6 +33,7 @@ export function parseLeadListQuery(
     location: firstParam(params, "location"),
     exported: firstParam(params, "exported") || undefined,
     origin: firstParam(params, "origin") || undefined,
+    mobile: firstParam(params, "mobile") || undefined,
     tags: parseTagIds(params.tag),
     page: firstParam(params, "page") ?? 1,
   })
@@ -46,6 +48,7 @@ export function hasLeadFilters(query: LeadListQuery) {
       query.location ||
       query.exported ||
       query.origin ||
+      query.mobile ||
       query.tags.length > 0,
   )
 }
@@ -57,6 +60,7 @@ export function leadListHref(query: LeadListQuery, page = query.page) {
   if (query.location) params.set("location", query.location)
   if (query.exported) params.set("exported", query.exported)
   if (query.origin) params.set("origin", query.origin)
+  if (query.mobile) params.set("mobile", query.mobile)
   if (query.tags.length > 0) params.set("tag", query.tags.join(","))
   if (page > 1) params.set("page", String(page))
   const search = params.toString()

@@ -14,21 +14,31 @@ export const exportLeadOrderBy = [
   { createdAt: "asc" as const },
 ]
 
+function excludeInvalidMobileIds(ids: string[]) {
+  return ids.length > 0 ? { id: { notIn: ids } } : {}
+}
+
 export function exportBaseWhere(
   userId: string,
   filters: Pick<ExportFilters, "source" | "location" | "tags">,
+  invalidIds: string[],
 ) {
   return {
     userId,
+    ...excludeInvalidMobileIds(invalidIds),
     ...(filters.source ? { source: filters.source } : {}),
     ...(filters.location ? { location: filters.location } : {}),
     ...tagFilterWhere(filters.tags),
   }
 }
 
-export function exportSelectWhere(userId: string, filters: ExportFilters) {
+export function exportSelectWhere(
+  userId: string,
+  filters: ExportFilters,
+  invalidIds: string[],
+) {
   return {
-    ...exportBaseWhere(userId, filters),
+    ...exportBaseWhere(userId, filters, invalidIds),
     ...(filters.includePreviouslyExported ? {} : { lastExportedAt: null }),
   }
 }

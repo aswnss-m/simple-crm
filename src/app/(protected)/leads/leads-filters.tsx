@@ -57,6 +57,7 @@ export function LeadsFilters({
     query.location,
     query.exported,
     query.origin,
+    query.mobile,
     query.tags.length > 0 ? "tags" : undefined,
   ].filter(Boolean).length
 
@@ -245,6 +246,26 @@ export function LeadsFilters({
             </Select>
           </Field>
 
+          <Field>
+            <FieldLabel>Mobile</FieldLabel>
+            <Select
+              value={query.mobile ?? "all"}
+              onValueChange={(value) =>
+                go({
+                  mobile: value === "invalid" ? "invalid" : undefined,
+                })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Any mobile" />
+              </SelectTrigger>
+              <SelectContent align="start" alignItemWithTrigger>
+                <SelectItem value="all">Any mobile</SelectItem>
+                <SelectItem value="invalid">Text instead of a number</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
           {filterCount > 0 ? (
             <Button
               type="button"
@@ -257,6 +278,7 @@ export function LeadsFilters({
                   location: undefined,
                   exported: undefined,
                   origin: undefined,
+                  mobile: undefined,
                   tags: [],
                 })
               }

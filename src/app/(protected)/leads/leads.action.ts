@@ -3,6 +3,7 @@
 import { guessFromMobile } from "@/lib/phone-location"
 import { prisma } from "@/lib/prisma"
 import { revalidateLeadData } from "@/lib/lead-cache"
+import { deleteInvalidMobiles } from "@/lib/mobile-query"
 import { getSession } from "@/lib/session"
 import { trycatch } from "@/lib/utils"
 import { TAG_COLORS } from "@/types/tag"
@@ -12,6 +13,10 @@ import {
   updateLeadSchema,
   type LeadActionResult,
 } from "@/types/lead"
+
+export type DeleteInvalidMobilesResult =
+  | { ok: true; deletedCount: number }
+  | { ok: false; error: string }
 
 async function getUserId() {
   const session = await getSession()
@@ -213,4 +218,28 @@ export async function deleteLead(input: unknown): Promise<LeadActionResult> {
 
   revalidateLeadData(userId, parsed.data.id)
   return { ok: true, id: parsed.data.id }
+}
+
+export async function deleteInvalidMobileLeads(): Promise<DeleteInvalidMobilesResult> {
+  const userId = await getUserId()
+  if (!userId) {
+    return {
+      ok: false,
+      error: "You need to be signed in to delete contacts.",
+    }
+  }
+
+  const [deletedCount, error] = await trycatch(() =>
+    deleteInvalidMobiles(userId),
+  )
+
+  if (error || deletedCount == null) {
+    return { ok: false, error: "Could not delete those contacts." }
+  }
+
+  if (deletedCount > 0) {
+    revalidateLeadData(userId)
+  }
+
+  return { ok: true, deletedCount: Number(deletedCount) }
 }

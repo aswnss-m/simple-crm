@@ -22,8 +22,7 @@ export function stripMobileSpaces(mobile: string) {
 }
 
 export function isNumericMobile(mobile: string) {
-  const cleaned = stripMobileSpaces(mobile)
-  return cleaned.length > 0 && Number.isFinite(Number(cleaned))
+  return /^\+?\d+$/.test(stripMobileSpaces(mobile))
 }
 
 function lookupDigits(mobile: string) {

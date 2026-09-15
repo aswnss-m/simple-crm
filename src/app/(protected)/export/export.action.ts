@@ -3,6 +3,7 @@
 import { buildExportFileName } from "@/lib/export-csv"
 import { prisma } from "@/lib/prisma"
 import { revalidateLeadData } from "@/lib/lead-cache"
+import { listInvalidMobileIds } from "@/lib/mobile-query"
 import { getSession } from "@/lib/session"
 import { trycatch } from "@/lib/utils"
 import {
@@ -37,13 +38,14 @@ export async function previewExport(input: unknown): Promise<ExportPreviewResult
   }
 
   const filters = parsed.data
-  const baseWhere = exportBaseWhere(userId, filters)
+  const invalidIds = await listInvalidMobileIds(userId)
+  const baseWhere = exportBaseWhere(userId, filters, invalidIds)
 
   const [matching, neverExported, samples] = await Promise.all([
     prisma.lead.count({ where: baseWhere }),
     prisma.lead.count({ where: { ...baseWhere, lastExportedAt: null } }),
     prisma.lead.findMany({
-      where: exportSelectWhere(userId, filters),
+      where: exportSelectWhere(userId, filters, invalidIds),
       orderBy: exportLeadOrderBy,
       take: EXPORT_PREVIEW_ROWS,
       select: exportLeadSelect,
@@ -69,12 +71,13 @@ export async function createExport(input: unknown): Promise<ExportActionResult> 
   }
 
   const filters = parsed.data
+  const invalidIds = await listInvalidMobileIds(userId)
 
   const [result, error] = await trycatch(() =>
     prisma.$transaction(
       async (tx) => {
         const leads = await tx.lead.findMany({
-          where: exportSelectWhere(userId, filters),
+          where: exportSelectWhere(userId, filters, invalidIds),
           orderBy: exportLeadOrderBy,
           take: filters.limit,
           select: {

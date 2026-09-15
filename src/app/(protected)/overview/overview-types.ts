@@ -22,4 +22,5 @@ export type OverviewData = {
   locations: OverviewBreakdownItem[]
   sources: OverviewBreakdownItem[]
   recent: OverviewRecentLead[]
+  invalidMobileCount: number
 }

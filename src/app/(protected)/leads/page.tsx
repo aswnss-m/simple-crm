@@ -21,10 +21,8 @@ export default async function LeadsPage({
   if (!session) return redirect("/login")
 
   const query = parseLeadListQuery(await searchParams)
-  const { leads, total, totalAll, sources, locations, tags } = await loadLeadList(
-    session.user.id,
-    query,
-  )
+  const { leads, total, totalAll, invalidMobileCount, sources, locations, tags } =
+    await loadLeadList(session.user.id, query)
 
   const pages = Math.max(1, Math.ceil(total / LEADS_PAGE_SIZE))
   if (query.page > pages && total > 0) {
@@ -38,6 +36,7 @@ export default async function LeadsPage({
       total={total}
       emptyLibrary={totalAll === 0}
       filtered={hasLeadFilters(query)}
+      invalidMobileCount={invalidMobileCount}
       sources={sources}
       locations={locations}
       tags={tags}

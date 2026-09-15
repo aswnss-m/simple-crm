@@ -109,6 +109,10 @@ export const leadListQuerySchema = z.object({
     .transform((value) =>
       value === "imported" || value === "manual" ? value : undefined,
     ),
+  mobile: z
+    .string()
+    .optional()
+    .transform((value) => (value === "invalid" ? "invalid" : undefined)),
   tags: tagIdListSchema,
   page: z.coerce.number().int().min(1).catch(1),
 })

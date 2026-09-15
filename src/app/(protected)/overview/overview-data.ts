@@ -1,6 +1,7 @@
 import { format, formatDistanceToNow, startOfMonth, subMonths } from "date-fns"
 
 import { prisma } from "@/lib/prisma"
+import { countInvalidMobiles } from "@/lib/mobile-query"
 
 import type {
   OverviewBreakdownItem,
@@ -27,6 +28,7 @@ export async function loadOverview(userId: string): Promise<OverviewData> {
     topSources,
     recent,
     locationCountRows,
+    invalidMobileCount,
   ] = await Promise.all([
     prisma.lead.count({ where: { userId } }),
     prisma.lead.count({
@@ -72,6 +74,7 @@ export async function loadOverview(userId: string): Promise<OverviewData> {
       WHERE "userId" = ${userId}
         AND location IS NOT NULL
     `,
+    countInvalidMobiles(userId),
   ])
 
   const topLocationTotal = topLocations.reduce(
@@ -130,5 +133,6 @@ export async function loadOverview(userId: string): Promise<OverviewData> {
       source: lead.source,
       addedLabel: formatDistanceToNow(lead.createdAt, { addSuffix: true }),
     })),
+    invalidMobileCount,
   }
 }
